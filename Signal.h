@@ -54,7 +54,6 @@ namespace Signal
     class signal_base
     {
     public:
-        virtual void v_raise() = 0;
         virtual ~signal_base() {}
     };
 
@@ -91,20 +90,18 @@ namespace Signal
      * Represents a signal whose handler is a member of a particular
      * class
      *
-     * @tparam R  Signal handler return type
-     * @tparam C  Class that owns the signal handler
-     * @tparam T1 Specifies the type of the 1st input to pass to the
-     *            handler
-     * @tparam T2 Specifies the type(s) of any additional inputs the
-     *            handler requires
+     * @tparam R  The signal handler return type
+     * @tparam C  Class that implements the handler
+     * @tparam A  Specifies the type(s) of the arguments required by
+     *            the handler
      *
      ******************************************************************
      */
-    template <class R, class C, class T1, class... T2>
-    class mem_ptr : public signal_t<R,T1,T2...>
+    template <class R, class C, class... A>
+    class mem_ptr : public signal_t<R,A...>
     {
-        using Handler       = R(C::*)(T1,T2...);
-        using const_Handler = R(C::*)(T1,T2...) const;
+        using Handler       = R(C::*)(A...);
+        using const_Handler = R(C::*)(A...) const;
 
     public:
 
@@ -138,8 +135,8 @@ namespace Signal
          *
          * @param[in] obj  The object through which to invoke the signal
          *                 handler
-         * @param[in] func A pointer to the handler which is a member of
-         *                 class C
+         * @param[in] func A pointer to the *const* signal handler which
+         *                 is a member of class C
          */
         mem_ptr(C& obj, const const_Handler func)
             : _const_func(func), _func(NULL), _obj(obj)
@@ -177,8 +174,8 @@ namespace Signal
         /**
          * Attach a new signal handler
          *
-         * @param[in] func A pointer to the handler which is a member of
-         *                 class C
+         * @param[in] func A pointer to the *const* signal handler which
+         *                 is a member of class C
          *
          * @return True on success
          */
@@ -197,8 +194,8 @@ namespace Signal
         /**
          * Bind arguments to the signal handler
          *
-         * @param [in] args A set of arguments to implicitly pass to the
-         *                  handler
+         * @param [in] args A set of arguments to implicitly pass to
+         *                  the handler
          */
         template <typename... T>
         void bind(T&&... args)
@@ -231,45 +228,35 @@ namespace Signal
         }
 
         /**
-         * Forward a set of arguments to the signal handler. This will
-         * fail if a handler is not attached, which can be verified by
-         * calling is_connected()
+         * Invoke the signal handler. This will fail if no handler is
+         * attached, which can be verified with is_connected()
          *
-         * @param [in] arg1 First input argument to pass to the
-         *                  signal handler
-         * @param [in] args Additional arguments needed by the handler
-         *
-         * @return The return value of the attached handler
-         */
-        R raise(T1 arg1, T2... args)
-        {
-            if (_func != NULL)
-                return (_obj.*_func)(arg1, args...);
-            else
-                return (_obj.*_const_func)(arg1, args...);
-        }
-
-        /**
-         * Forwards "bound" arguments to the signal handler. This will
-         * fail if a handler is not attached, which can be verified by
-         * calling is_connected()
+         * @param[in] args The input arguments to provide the handler
+         *                 with
          *
          * @return The return value of the handler
          */
-        R raise()
+        R raise(A... args)
         {
-            return
-                run(typename gens<1+sizeof...(T2)>::type());
+            if (_func != NULL)
+                return (_obj.*_func)(std::forward<A>(args)...);
+            else
+                return
+                 (_obj.*_const_func)(std::forward<A>(args)...);
         }
 
         /**
-         * Forwards "bound" arguments to the signal handler. This will
-         * fail if a handler is not attached, which can be verified by
-         * calling is_connected()
+         * Forward bound arguments to the signal handler. Note this
+         * will fail if no handler is currently attached, which can
+         * be verified with is_connected()
+         *
+         * @return The return value of the handler
          */
-        void v_raise()
+        template <int N=0>
+        R raise()
         {
-            raise();
+            return
+                run(typename gens<sizeof...(A)>::type());
         }
 
     protected:
@@ -290,178 +277,8 @@ namespace Signal
         bool    _is_init;
         C&      _obj;
 
-        SignalArgs<T1,T2...> 
+        SignalArgs< A... >
                 _sargs;
-    };
-
-    /**
-     ******************************************************************
-     *
-     * @class mem_ptr
-     *
-     * Represents a signal whose handler is a member of a particular
-     * class
-     *
-     * This is a specialization where the signal handler requires no
-     * arguments
-     *
-     * @tparam R Signal handler return type
-     * @tparam C Class that owns the signal handler
-     *
-     ******************************************************************
-     */
-    template <class R, class C>
-    class mem_ptr<R,C,void> : public signal_t<R>
-    {
-        using Handler       = R(C::*)();
-        using const_Handler = R(C::*)() const;
-
-    public:
-
-        /**
-         * Constructor (1)
-         *
-         * @param [in] obj The object through which to invoke the signal
-         *                 handler
-         */
-        mem_ptr(C& obj)
-            : _const_func(NULL), _func(NULL), _is_init(false), _obj(obj)
-        {
-        }
-
-        /**
-         * Constructor (2)
-         *
-         * @param[in] obj  The object through which to invoke the signal
-         *                 handler
-         * @param[in] func A pointer to the handler which is a member of
-         *                 class C
-         */
-        mem_ptr(C& obj, const Handler func)
-            : _const_func(NULL), _func(func), _obj(obj)
-        {
-            _is_init = _func != NULL;
-        }
-
-        /**
-         * Constructor (3)
-         *
-         * @param[in] obj  The object through which to invoke the signal
-         *                 handler
-         * @param[in] func A pointer to the handler which is a member of
-         *                 class C
-         */
-        mem_ptr(C& obj, const const_Handler func)
-            : _const_func(func), _func(NULL), _obj(obj)
-        {
-            _is_init = _const_func != NULL;
-        }
-
-        /**
-         * Destructor
-         */
-        ~mem_ptr()
-        {
-        }
-
-        /**
-         * Attach a new signal handler
-         *
-         * @param[in] func A pointer to the handler which is a member of
-         *                 class C
-         *
-         * @return True on success
-         */
-        bool attach(const Handler func)
-        {
-            if (func == NULL)
-                return false;
-
-            _func = func;
-            _const_func = NULL;
-
-            _is_init = true;
-            return true;
-        }
-
-        /**
-         * Attach a new signal handler
-         *
-         * @param[in] func A pointer to the handler which is a member of
-         *                 class C
-         *
-         * @return True on success
-         */
-        bool attach(const const_Handler func)
-        {
-            if (func == NULL)
-                return false;
-
-            _func = NULL;
-            _const_func = func;
-
-            _is_init = true;
-            return true;
-        }
-
-        /**
-         * Detach the current signal handler
-         *
-         * @return True on success
-         */
-        bool detach()
-        {
-            _is_init = false;
-            _const_func = NULL; _func = NULL;
-
-            return true;
-        }
-
-        /**
-         * Determine if this signal is currently attached
-         *
-         * @return True if attached
-         */
-        bool is_connected() const
-        {
-            return
-                !(_const_func == NULL && _func == NULL);
-        }
-
-        /**
-         * Invoke the signal handler. This will fail if a handler is
-         * not attached. Use is_connected() to determine if a
-         * signal can safely be raised. Executing this on a detached
-         * signal will raise a seg fault
-         *
-         * @return The return value of the handler
-         */
-        R raise()
-        {
-            if (_func != NULL)
-                return (_obj.*_func)();
-            else
-                return (_obj.*_const_func)();
-        }
-
-        /**
-         * Invoke the signal handler. This will fail if a handler is
-         * not attached. Use is_connected() to determine if a
-         * signal can safely be raised. Executing this on a detached
-         * signal will raise a seg fault
-         */
-        void v_raise()
-        {
-            raise();
-        }
-
-    protected:
-
-        const_Handler
-                _const_func;
-        Handler _func;
-        bool    _is_init;
-        C&      _obj;
     };
 
     /**
@@ -472,17 +289,15 @@ namespace Signal
      * Represents a signal whose handler is a C-style function pointer
      *
      * @tparam R  Signal handler return type
-     * @tparam T1 Specifies the type of the first input to pass to the
-     *            handler
-     * @tparam T2 Specifies the type(s) of additional arguments needed
-     *            by the handler
+     * @tparam A  Specifies the type(s) of input arguments required by
+     *            the handler
      *
      ******************************************************************
      */
-    template <class R, class T1, class... T2>
-    class fcn_ptr : public signal_t<R,T1,T2...>
+    template <class R, class... A>
+    class fcn_ptr : public signal_t<R,A...>
     {
-        using Handler = R(*)(T1,T2...);
+        using Handler = R(*)(A...);
 
     public:
 
@@ -567,42 +382,31 @@ namespace Signal
         }
 
         /**
-         * Forward a set of arguments to the signal handler. This will
-         * fail if a handler is not attached, which can be verified by
-         * calling is_connected()
+         * Invoke the signal handler. This will fail if no handler is
+         * attached, which can be verified with is_connected()
          *
-         * @param [in] arg1 First input argument to pass to the
-         *                  signal handler
-         * @param [in] args Additional arguments needed by the handler
-         *
-         * @return  The return value of the handler
-         */
-        R raise(T1 arg1, T2... args)
-        {
-            return _func(arg1, args...);
-        }
-
-        /**
-         * Forwards "bound" arguments to the signal handler. This will
-         * fail if a handler is not attached, which can be verified by
-         * calling is_connected()
+         * @param[in] args The input arguments to provide the handler
+         *                 with
          *
          * @return The return value of the handler
          */
-        R raise()
+        R raise(A... args)
         {
-            return
-                run(typename gens<1+sizeof...(T2)>::type());
+            return _func(std::forward<A>(args)...);
         }
 
         /**
-         * Forwards "bound" arguments to the signal handler. This will
-         * fail if a handler is not attached, which can be verified by
-         * calling is_connected()
+         * Forward bound arguments to the signal handler. Note this
+         * will fail if no handler is currently attached, which can
+         * be verified with is_connected()
+         *
+         * @return The return value of the handler
          */
-        void v_raise()
+        template <int N=0>
+        R raise()
         {
-            raise();
+            return
+                run(typename gens<sizeof...(A)>::type());
         }
 
     protected:
@@ -610,133 +414,14 @@ namespace Signal
         template<int... S>
         R run(seq<S...>)
         {
-                return _func(std::get<S>( _sargs.args)... );
+            return _func (std::get<S>( _sargs.args)... );
         }
 
         Handler _func;
         bool    _is_init;
 
-        SignalArgs<T1,T2...> 
+        SignalArgs<A...>
                 _sargs;
-    };
-
-    /**
-     ******************************************************************
-     *
-     * @class fcn_ptr
-     *
-     * Represents a signal whose handler is a C-style function pointer
-     *
-     * This is a specialization where the signal handler does not take
-     * any input arguments
-     *
-     * @tparam R  Signal handler return type
-     *
-     ******************************************************************
-     */
-    template <class R>
-    class fcn_ptr<R,void> : public signal_t<R>
-    {
-        using Handler = R(*)();
-
-    public:
-
-        /**
-         * Default constructor
-         */
-        fcn_ptr()
-            : _func(NULL), _is_init(false)
-        {
-        }
-
-        /**
-         * Construct a fcn_ptr from a handler
-         *
-         * @param[in] func The handler, which is a C-style function
-         *                 pointer
-         */
-        fcn_ptr(const Handler func)
-            : _func(func)
-        {
-            _is_init = _func != NULL;
-        }
-
-        /**
-         * Destructor
-         */
-        ~fcn_ptr()
-        {
-        }
-
-        /**
-         * Attach a new signal handler
-         *
-         * @param[in] func The handler, which is a C-style function
-         *                 pointer
-         *
-         * @return True on success
-         */
-        bool attach(const Handler func)
-        {
-            if (func == NULL)
-                return false;
-
-            _func = func;
-            _is_init = true;
-
-            return true;
-        }
-
-        /**
-         * Detach the current signal handler
-         *
-         * @return True on success
-         */
-        bool detach()
-        {
-            _is_init = false; _func = NULL;
-
-            return true;
-        }
-
-        /**
-         * Determine if this signal is currently attached
-         *
-         * @return True if attached
-         */
-        bool is_connected() const
-        {
-            return _func != NULL;
-        }
-
-        /**
-         * Invoke the signal handler. This will fail if a handler is
-         * not attached. Use is_connected() to determine if a
-         * signal can safely be raised. Executing this on a detached
-         * signal will raise a seg fault
-         *
-         * @return The return value of the handler
-         */
-        R raise()
-        {
-            return _func();
-        }
-
-        /**
-         * Invoke the signal handler. This will fail if a handler is
-         * not attached. Use is_connected() to determine if a
-         * signal can safely be raised. Executing this on a detached
-         * signal will raise a seg fault
-         */
-        void v_raise()
-        {
-            raise();
-        }
-
-    protected:
-
-        Handler _func;
-        bool    _is_init;
     };
 
     /**
@@ -746,19 +431,17 @@ namespace Signal
      *
      * Enables the creation of customized "signals" that trigger events
      * of interest which are application-specific. Each Signal wraps
-     * a generic function pointer or some class method that is used as
-     * a handler when that signal is raised. This concept is analogous
-     * to using the standard signal library
+     * a generic function pointer or class method to be used as a
+     * handler when the Signal is raised, similar to using the standard
+     * signal library
      *
      * @tparam R  The signal handler's return type
-     * @tparam T1 Specify the type of the first argument to pass to the
-     *            signal handler
-     * @tparam T2 Specify the type(s) of additional arguments needed by
+     * @tparam A  Specifies the type(s) of input arguments required by
      *            the handler
      *
      ******************************************************************
      */
-    template <class R, class T1, class... T2>
+    template <class R, class... A>
     class Signal : public signal_base
     {
     public:
@@ -776,16 +459,16 @@ namespace Signal
          *
          * @param[in] func A pointer to the signal handler
          */
-        Signal(R(*func)(T1,T2...))
+        Signal(R(*func)(A...))
             : _is_mem_ptr(false)
         {
-            _sig = new fcn_ptr<R,T1,T2...>(func);
+            _sig = new fcn_ptr<R,A...>(func);
         }
 
         /**
          * Create a signal whose handler is a member function of class C
          *
-         * @tparam C Class that owns the handler 
+         * @tparam C Class that implements the handler 
          *
          * @param[in] obj  Object (of class C) through which to invoke
          *                 the handler
@@ -793,27 +476,27 @@ namespace Signal
          *                 to class C
          */
         template <typename C>
-        Signal(C& obj, R(C::*func)(T1,T2...))
+        Signal(C& obj, R(C::*func)(A...))
             : _is_mem_ptr(true)
         {
-            _sig = new mem_ptr<R,C,T1,T2...>(obj, func);
+            _sig = new mem_ptr<R,C,A...>(obj, func);
         }
 
         /**
          * Create a signal whose handler is a member function of class C
          *
-         * @tparam C Class that owns the handler 
+         * @tparam C Class that implements the handler 
          *
          * @param[in] obj  Object (of class C) through which to invoke
          *                 the handler
-         * @param[in] func A pointer to the signal handler which belongs
-         *                 to class C
+         * @param[in] func A pointer to the *const* signal handler which
+         *                 belongs to class C
          */
         template <typename C>
-        Signal(C& obj, R(C::*func)(T1,T2...) const)
+        Signal(C& obj, R(C::*func)(A...) const)
             : _is_mem_ptr(true)
         {
-            _sig = new mem_ptr<R,C,T1,T2...>(obj, func);
+            _sig = new mem_ptr<R,C,A...>(obj, func);
         }
 
         /**
@@ -825,6 +508,40 @@ namespace Signal
         }
 
         /**
+         * Move constructor
+         *
+         * @param [in] rhs A Signal to move into *this. \a rhs is
+         *                 left detached
+         */
+        Signal(Signal<R,A...>&& rhs)
+        {
+            *this = std::move( rhs );
+        }
+
+        /**
+         * Move assignment operator
+         *
+         * @param [in] rhs A Signal to move into *this. \a rhs is
+         *                 left detached
+         *
+         * @return *this
+         */
+        Signal<R,A...>& operator=(Signal<R,A...>&& rhs)
+        {
+            if (this != &rhs)
+            {
+                _is_mem_ptr = rhs._is_mem_ptr;
+                _sargs      = std::move ( rhs._sargs );
+                _sig = rhs._sig;
+                
+                rhs._is_mem_ptr = false;
+                rhs._sig = NULL;
+            }
+
+            return *this;
+        }
+
+        /**
          * Attach a handler to this Signal, removing the previous
          * handler (if it exists)
          *
@@ -832,12 +549,12 @@ namespace Signal
          *
          * @return  True if the handler was successfully attached
          */
-        bool attach(R(*func)(T1,T2...))
+        bool attach(R(*func)(A...))
         {
             if (is_connected() && !detach())
                 return false;
 
-            _sig = new fcn_ptr<R,T1,T2...>(func);
+            _sig = new fcn_ptr<R,A...>(func);
             _is_mem_ptr = false;
 
             return _sig->is_connected();
@@ -847,7 +564,7 @@ namespace Signal
          * Attach a handler to this Signal, removing the previous
          * handler (if it exists)
          *
-         * @tparam C Class that owns the handler 
+         * @tparam C Class that implements the handler 
          *
          * @param[in] obj  Object (of class C) through which to
          *                 invoke the handler
@@ -856,13 +573,13 @@ namespace Signal
          * @return  True if the handler was successfully attached
          */
         template <typename C>
-        bool attach(C& obj, R(C::*func)(T1,T2...))
+        bool attach(C& obj, R(C::*func)(A...))
         {
             if (is_connected() && !detach())
                 return false;
             else
             {
-                _sig = new mem_ptr<R,C,T1,T2...>(obj, func);
+                _sig = new mem_ptr<R,C,A...>(obj, func);
                 _is_mem_ptr = true;
             }
 
@@ -875,19 +592,19 @@ namespace Signal
          * fail if this signal was not initialized with an object of
          * class C
          *
-         * @tparam C Class that owns the signal handler 
+         * @tparam C Class that implements the signal handler 
          *
          * @param[in] func A pointer to the handler
          *
          * @return True if the new handler was successfully attached
          */
         template <typename C>
-        bool attach(R(C::*func)(T1,T2...))
+        bool attach(R(C::*func)(A...))
         {
             if (!_is_mem_ptr || !is_connected())
                 return false;
             else
-                dynamic_cast<mem_ptr<R,C,T1,T2...>*>(_sig)->attach(func);
+                dynamic_cast<mem_ptr<R,C,A...>*>(_sig)->attach(func);
 
             return _sig->is_connected();
         }
@@ -896,22 +613,22 @@ namespace Signal
          * Attach a handler to this Signal, removing the previous
          * handler (if it exists)
          *
-         * @tparam C Class that owns the handler 
+         * @tparam C Class that implements the handler 
          *
          * @param[in] obj  Object (of class C) through which to
          *                 invoke the handler
-         * @param[in] func A pointer to the signal handler
+         * @param[in] func A pointer to the *const* handler
          *
          * @return True if the handler was successfully attached
          */
         template <typename C>
-        bool attach(C& obj, R(C::*func)(T1,T2...) const)
+        bool attach(C& obj, R(C::*func)(A...) const)
         {
             if (is_connected() && !detach())
                 return false;
             else
             {
-                _sig = new mem_ptr<R,C,T1,T2...>(obj, func);
+                _sig = new mem_ptr<R,C,A...>(obj, func);
                 _is_mem_ptr = true;
             }
 
@@ -924,19 +641,19 @@ namespace Signal
          * fail if this signal was not initialized with an object of
          * class C
          *
-         * @tparam C Class that owns the signal handler 
+         * @tparam C The class that implements the signal handler 
          *
-         * @param[in] func A pointer to the handler
+         * @param[in] func A pointer to the *const* handler
          *
          * @return True if the new handler was successfully attached
          */
         template <typename C>
-        bool attach(R(C::*func)(T1,T2...) const)
+        bool attach(R(C::*func)(A...) const)
         {
             if (!_is_mem_ptr || !is_connected())
                 return false;
             else
-                dynamic_cast<mem_ptr<R,C,T1,T2...>*>(_sig)->attach(func);
+                dynamic_cast<mem_ptr<R,C,A...>*>(_sig)->attach(func);
 
             return _sig->is_connected();
         }
@@ -989,46 +706,36 @@ namespace Signal
          * on a detached signal will raise a seg fault (which probably
          * isn't the signal you intended)
          *
-         * @param [in] arg1 First input argument to pass to the
-         *                  signal handler
-         * @param [in] args Additional arguments needed by the handler
+         * @param [in] args The input arguments to provide the handler
+         *                  with
          * 
          * @return The handler's return value
          */
-        R raise(T1 arg1, T2... args)
+        R raise(A... args)
         {
-            return _sig->raise(arg1, args...);
+            return _sig->raise(std::forward<A>(args)...);
         }
 
         /**
-         * Forwards "bound" arguments to the signal handler. This will
-         * fail if a handler is not attached, which can be verified by
-         * calling is_connected()
+         * Forward bound arguments to the signal handler. Note this
+         * will fail if no handler is currently attached, which can
+         * be verified with is_connected()
          *
          * @return The return value of the handler
          */
+        template <int N=0>
         R raise()
         {
             return
-                run(typename gens<1+sizeof...(T2)>::type());
-        }
-
-        /**
-         * Forwards "bound" arguments to the signal handler. This will
-         * fail if a handler is not attached, which can be verified by
-         * calling is_connected()
-         */
-        void v_raise()
-        {
-            raise();
+                run(typename gens<sizeof...(A)>::type());
         }
 
         /*
          * Forbid copy construction/assignment:
          */
-        Signal(const Signal<R,T1,T2...>& rhs)        = delete;
-        Signal<R,T1,T2...>&
-            operator=(const Signal<R,T1,T2...>& rhs) = delete;
+        Signal(const Signal<R,A...>& rhs)        = delete;
+        Signal<R,A...>&
+            operator=(const Signal<R,A...>& rhs) = delete;
 
     private:
 
@@ -1040,277 +747,11 @@ namespace Signal
 
         bool    _is_mem_ptr;
 
-        SignalArgs<T1,T2...> 
+        SignalArgs<A...> 
                 _sargs;
 
-        signal_t<R,T1,T2...>*
+        signal_t<R,A...>*
                 _sig;
-    };
-
-    /**
-     ******************************************************************
-     *
-     * @class Signal
-     *
-     * Enables the creation of customized "signals" that trigger events
-     * of interest which are application-specific. Each Signal wraps
-     * a generic function pointer or some class method that is used as
-     * a handler when that signal is raised. This concept is analogous
-     * to using the standard signal library.
-     *
-     * This is a specialization where the signal handler takes no input
-     * arguments
-     *
-     * @tparam R  The signal handler's return type
-     *
-     ******************************************************************
-     */
-    template <class R>
-    class Signal<R,void> : public signal_base
-    {
-    public:
-
-        /**
-         * Default constructor
-         */
-        Signal()
-            : _is_mem_ptr(false), _sig(NULL)
-        {
-        }
-
-        /**
-         * Create a signal with a handler
-         *
-         * @param[in] func C-style function pointer to the signal handler
-         */
-        Signal(R(*func)())
-            : _is_mem_ptr(false)
-        {
-            _sig = new fcn_ptr<R,void>(func);
-        }
-
-        /**
-         * Create a signal whose handler is a member function of class C
-         *
-         * @tparam C Class that owns the handler 
-         *
-         * @param[in] obj  Object (of class C) through which to invoke
-         *                 the handler
-         * @param[in] func A pointer to the signal handler which belongs
-         *                 to class C
-         */
-        template <typename C>
-        Signal(C& obj, R(C::*func)())
-            : _is_mem_ptr(true)
-        {
-            _sig = new mem_ptr<R,C,void>(obj, func);
-        }
-
-        /**
-         * Create a signal whose handler is a member function of class C
-         *
-         * @tparam C Class that owns the handler 
-         *
-         * @param[in] obj  Object (of class C) through which to invoke
-         *                 the handler
-         * @param[in] func A pointer to the signal handler which belongs
-         *                 to class C
-         */
-        template <typename C>
-        Signal(C& obj, R(C::*func)() const)
-            : _is_mem_ptr(true)
-        {
-            _sig = new mem_ptr<R,C,void>(obj, func);
-        }
-
-        /**
-         * Destructor
-         */
-        ~Signal()
-        {
-            if (_sig) delete _sig;
-        }
-
-        /**
-         * Attach a handler to this Signal, removing the previous
-         * handler (if it exists)
-         *
-         * @param[in] func A pointer to the signal handler
-         *
-         * @return  True if the handler was successfully attached
-         */
-        bool attach(R(*func)())
-        {
-            if (is_connected() && !detach())
-                return false;
-
-            _sig = new fcn_ptr<R,void>(func);
-            _is_mem_ptr = false;
-
-            return _sig->is_connected();
-        }
-
-        /**
-         * Attach a handler to this Signal, removing the previous
-         * handler (if it exists)
-         *
-         * @tparam C Class that owns the handler 
-         *
-         * @param[in] obj  Object (of class C) through which to
-         *                 invoke the handler
-         * @param[in] func A pointer to the signal handler
-         *
-         * @return  True if the handler was successfully attached
-         */
-        template <typename C>
-        bool attach(C& obj, R(C::*func)())
-        {
-            if (is_connected() && !detach())
-                return false;
-            else
-            {
-                _sig = new mem_ptr<R,C,void>(obj, func);
-                _is_mem_ptr = true;
-            }
-
-            return _sig->is_connected();
-        }
-
-        /**
-         * Associate a new handler with this Signal without changing 
-         * the object through which it is called. This method will
-         * fail if this signal was not initialized with an object of
-         * class C
-         *
-         * @tparam C Class that owns the signal handler 
-         *
-         * @param[in] func A pointer to the handler
-         *
-         * @return True if the new handler was successfully attached
-         */
-        template <typename C>
-        bool attach(R(C::*func)())
-        {
-            if (!_is_mem_ptr || !is_connected())
-                return false;
-            else
-                dynamic_cast<mem_ptr<R,C,void>*>(_sig)->attach(func);
-
-            return _sig->is_connected();
-        }
-
-        /**
-         * Attach a handler to this Signal, removing the previous
-         * handler (if it exists)
-         *
-         * @tparam C Class that owns the handler 
-         *
-         * @param[in] obj  Object (of class C) through which to
-         *                 invoke the handler
-         * @param[in] func A pointer to the signal handler
-         *
-         * @return  True if the handler was successfully attached
-         */
-        template <typename C>
-        bool attach(C& obj, R(C::*func)() const)
-        {
-            if (is_connected() && !detach())
-                return false;
-            else
-            {
-                _sig = new mem_ptr<R,C,void>(obj, func);
-                _is_mem_ptr = true;
-            }
-
-            return _sig->is_connected();
-        }
-
-        /**
-         * Associate a new handler with this Signal without changing 
-         * the object through which it is called. This method will
-         * fail if this signal was not initialized with an object of
-         * class C
-         *
-         * @tparam C Class that owns the signal handler 
-         *
-         * @param[in] func A pointer to the handler
-         *
-         * @return True if the new handler was successfully attached
-         */
-        template <typename C>
-        bool attach(R(C::*func)() const)
-        {
-            if (!_is_mem_ptr || !is_connected())
-                return false;
-            else
-                dynamic_cast<mem_ptr<R,C,void>*>(_sig)->attach(func);
-
-            return _sig->is_connected();
-        }
-
-        /**
-         * Detach a signal handler
-         *
-         * @return True on success, or false if no handler is attached
-         */
-        bool detach()
-        {
-            if (!_sig) return false;
-
-            delete _sig; _sig = NULL;
-            _is_mem_ptr = false;
-
-            return true;
-        }
-
-        /**
-         * Check whether a handler is attached to this Signal
-         *
-         * @return True if a handler is currently attached
-         */
-        bool is_connected() const
-        {
-            if (!_sig)
-                return false;
-
-            return _sig->is_connected();
-        }
-
-        /**
-         * Invoke the signal handler. This will fail if a handler is
-         * not attached. Use is_connected() to determine if a
-         * signal can safely be raised. Executing this on a detached
-         * signal will raise a seg fault
-         * 
-         * @return The handler's return value
-         */
-        R raise()
-        {
-            return _sig->raise();
-        }
-
-        /**
-         * Invoke the signal handler. This will fail if a handler is
-         * not attached. Use is_connected() to determine if a
-         * signal can safely be raised. Executing this on a detached
-         * signal will raise a seg fault
-         */
-        void v_raise()
-        {
-            raise();
-        }
-
-        /*
-         * Forbid copy construction/assignment:
-         */
-        Signal(const Signal<R,void>& rhs)        = delete;
-        Signal<R,void>&
-            operator=(const Signal<R,void>& rhs) = delete;
-
-    private:
-
-        bool         _is_mem_ptr;
-        signal_t<R>* _sig;
     };
 
     /**
@@ -1361,6 +802,8 @@ namespace Signal
          *
          * @param [in] handler A callable object to be used as a signal
          *                     handler
+         *
+         * @return True on success
          */
         bool attach(Func handler)
         {

@@ -1,1021 +1,370 @@
 #include <iostream>
 #include <string>
 
+#include "abort.h"
 #include "Signal.h"
 
-class MemPtrTest
+namespace test_funcs
 {
+	void func1()
+	{
+		std::cout << "Hello from " << __PRETTY_FUNCTION__
+			<< "!" << std::endl;
+	}
+
+	void func2(const std::string& str, int a)
+	{
+		std::cout << __PRETTY_FUNCTION__
+			<< ": str = " << str << ", a = " << a
+			<< std::endl;
+	}
+
+	std::string func3()
+	{
+		std::cout << "Hello from " << __PRETTY_FUNCTION__
+			<< "!" << std::endl;
+		return "";
+	}
+
+	void func4()
+	{
+		std::cout << "Hello from " << __PRETTY_FUNCTION__
+			<< "!" << std::endl;
+	}
+
+	void func5(const std::string& str, int a)
+	{
+		std::cout << __PRETTY_FUNCTION__
+			<< ": str = " << str << ", a = " << a
+			<< std::endl;
+	}
+
+	std::string func6()
+	{
+		std::cout << "Hello from " << __PRETTY_FUNCTION__
+			<< "!" << std::endl;
+		return "";
+	}
+}
+
+class test_class
+{
+
 public:
 
-	MemPtrTest()
+	void func1()
 	{
+		std::cout << "Hello from " << __PRETTY_FUNCTION__
+			<< "!" << std::endl;
 	}
 
-	~MemPtrTest()
+	void func2(const std::string& str, int a)
 	{
+		std::cout << __PRETTY_FUNCTION__
+			<< ": str = " << str << ", a = " << a
+			<< std::endl;
 	}
 
-	void bool_constStringRef(bool b, const std::string& str)
+	std::string func3() const
 	{
-		std::cout << __PRETTY_FUNCTION__;
-		std::cout << ": b = " << b
-			<< ", str = " << str << std::endl;
+		std::cout << "Hello from " << __PRETTY_FUNCTION__
+			<< "!" << std::endl;
+		return "";
 	}
 
-	void bool_string(bool b, std::string str)
+	void func4()
 	{
-		std::cout << __PRETTY_FUNCTION__;
-		std::cout << ": b = " << b
-			<< ", str = " << str << std::endl;
+		std::cout << "Hello from " << __PRETTY_FUNCTION__
+			<< "!" << std::endl;
 	}
 
-	void bool_stringRef(bool b, std::string& str)
+	void func5(const std::string& str, int a)
 	{
-		std::cout << __PRETTY_FUNCTION__;
-		std::cout << ": b = " << b
-			<< ", str = " << str << std::endl;
+		std::cout << __PRETTY_FUNCTION__
+			<< ": str = " << str << ", a = " << a
+			<< std::endl;
 	}
 
-	void bool_stringRRef(bool b, std::string&& str)
+	std::string func6() const
 	{
-		std::cout << __PRETTY_FUNCTION__;
-		std::cout << ": b = " << b
-			<< ", str = " << str << std::endl;
+		std::cout << "Hello from " << __PRETTY_FUNCTION__
+			<< "!" << std::endl;
+		return "";
 	}
 
-	void int_constStringRef_const(int i, const std::string& str) const
+	bool operator()(const std::string& str) // Callable
 	{
-		std::cout << __PRETTY_FUNCTION__;
-		std::cout << ": i = " << i
-			<< ", str = " << str << std::endl;
-	}
-
-	void int_charPtr_voidPtr(int i, char* str1, void* str2)
-	{
-		std::cout << __PRETTY_FUNCTION__;
-		std::cout << ": i = " << i
-			<< ", str1 = " << str1
-			<< ", str2 = " << str2 << std::endl;
-	}
-
-	void int_constCharPtr_constVoidPtr(int i, const char* str1,
-		                               const void* str2)
-	{
-		std::cout << __PRETTY_FUNCTION__;
-		std::cout << ": i = " << i
-			<< ", str1 = " << str1
-			<< ", str2 = " << str2 << std::endl;
-	}
-
-	MemPtrTest& void_()
-	{
-		std::cout << __PRETTY_FUNCTION__ << std::endl;
-		return *this;
-	}
-
-	void void_const() const
-	{
-		std::cout << __PRETTY_FUNCTION__ << std::endl;
+		std::cout << __PRETTY_FUNCTION__
+			<< ": str = "
+			<< str << std::endl;
+		return true;
 	}
 };
 
-class FcnPtrTest
+class mem_ptr_test
 {
+
 public:
 
-	FcnPtrTest()
+	bool run()
 	{
-	}
+		test_class obj;
+		Signal::mem_ptr<void,test_class> mem_ptr1(obj);
 
-	~FcnPtrTest()
-	{
-	}
+		Signal::mem_ptr<void,test_class,const std::string&,int>
+			mem_ptr2(obj, &test_class::func2);
 
-	static void bool_constStringRef(bool b, const std::string& str)
-	{
-		std::cout << __PRETTY_FUNCTION__;
-		std::cout << ": b = " << b
-			<< ", str = " << str << std::endl;
-	}
+		Signal::mem_ptr<std::string,test_class>
+			mem_ptr3(obj,&test_class::func3);
 
-	static void bool_string(bool b, std::string str)
-	{
-		std::cout << __PRETTY_FUNCTION__;
-		std::cout << ": b = " << b
-			<< ", str = " << str << std::endl;
-	}
+		AbortIf(mem_ptr1.is_connected(), false);
+		AbortIfNot(mem_ptr2.is_connected(), false);
+		AbortIfNot(mem_ptr3.is_connected(), false);
 
-	static void bool_stringRef(bool b, std::string& str)
-	{
-		std::cout << __PRETTY_FUNCTION__;
-		std::cout << ": b = " << b
-			<< ", str = " << str << std::endl;
-	}
+		AbortIfNot(mem_ptr1.attach(&test_class::func1), false);
+		AbortIfNot(mem_ptr1.is_connected(), false);
 
-	static void bool_stringRRef(bool b, std::string&& str)
-	{
-		std::cout << __PRETTY_FUNCTION__;
-		std::cout << ": b = " << b
-			<< ", str = " << str << std::endl;
-	}
+		mem_ptr2.bind("hello", 1);
+		mem_ptr2.raise();
 
-	static void int_charPtr_voidPtr(int i, char* str1, void* str2)
-	{
-		std::cout << __PRETTY_FUNCTION__;
-		std::cout << ": i = " << i
-			<< ", str1 = " << str1
-			<< ", str2 = " << str2 << std::endl;
-	}
+		mem_ptr2.raise("sup", 100);
 
-	static void int_constCharPtr_constVoidPtr(int i, const char* str1,
-		                               const void* str2)
-	{
-		std::cout << __PRETTY_FUNCTION__;
-		std::cout << ": i = " << i
-			<< ", str1 = " << str1
-			<< ", str2 = " << str2 << std::endl;
-	}
+		mem_ptr1.raise();
+		mem_ptr3.raise();
 
-	static FcnPtrTest void_()
-	{
-		std::cout << __PRETTY_FUNCTION__ << std::endl;
-		return FcnPtrTest();
+		AbortIfNot(mem_ptr1.attach(&test_class::func4), false);
+		AbortIfNot(mem_ptr2.attach(&test_class::func5), false);
+		AbortIfNot(mem_ptr3.attach(&test_class::func6), false);
+
+		mem_ptr2.bind("hello again!", 2);
+		mem_ptr2.raise();
+
+		mem_ptr2.raise("sup yo", 200);
+
+		mem_ptr1.raise();
+		mem_ptr3.raise();
+
+		AbortIfNot(mem_ptr1.detach(), false);
+		AbortIfNot(mem_ptr2.detach(), false);
+		AbortIfNot(mem_ptr3.detach(), false);
+		AbortIf(mem_ptr1.is_connected(), false);
+		AbortIf(mem_ptr2.is_connected(), false);
+		AbortIf(mem_ptr3.is_connected(), false);
+
+		return true;
 	}
 };
 
-class SignalTest
+class fcn_ptr_test
 {
+
 public:
 
-	SignalTest()
+	bool run()
 	{
-	}
+		Signal::fcn_ptr<void> fcn_ptr1;
 
-	~SignalTest()
-	{
-	}
+		Signal::fcn_ptr<void,const std::string&,int>
+			fcn_ptr2(&test_funcs::func2);
 
-	bool memPtrTest1()
-	{
-		MemPtrTest test;
-		Signal::mem_ptr<void,MemPtrTest,bool,const std::string&>
-			mem_ptr1(test);
-		Signal::mem_ptr<void,MemPtrTest,bool,const std::string&>
-			mem_ptr2(test,&MemPtrTest::bool_constStringRef);
+		Signal::fcn_ptr<std::string>
+			fcn_ptr3(&test_funcs::func3);
 
-		mem_ptr1.attach(&MemPtrTest::bool_constStringRef);
+		AbortIf(fcn_ptr1.is_connected(), false);
+		AbortIfNot(fcn_ptr2.is_connected(), false);
+		AbortIfNot(fcn_ptr3.is_connected(), false);
 
-		if (!mem_ptr1.is_connected())
-		{
-			return false;
-		}
+		AbortIfNot(fcn_ptr1.attach(&test_funcs::func1), false);
+		AbortIfNot(fcn_ptr1.is_connected(), false);
 
-		if (!mem_ptr2.is_connected())
-		{
-			return false;
-		}
-
-		mem_ptr1.raise(true, "hello");
-		mem_ptr2.raise(false, "goodbye");
-
-		mem_ptr1.bind(true, "hiya");
-		mem_ptr2.bind(false, "see ya");
-
-		mem_ptr1.raise();
-		mem_ptr2.raise();
-
-		mem_ptr1.detach();
-		mem_ptr2.detach();
-
-		if (mem_ptr1.is_connected())
-		{
-			return false;
-		}
-
-		if (mem_ptr2.is_connected())
-		{
-			return false;
-		}
-
-		return true;
-	}
-
-	bool memPtrTest2()
-	{
-		MemPtrTest test;
-		Signal::mem_ptr<void,MemPtrTest,bool,std::string>
-			mem_ptr1(test);
-		Signal::mem_ptr<void,MemPtrTest,bool,std::string>
-			mem_ptr2(test,&MemPtrTest::bool_string);
-
-		mem_ptr1.attach(&MemPtrTest::bool_string);
-
-		if (!mem_ptr1.is_connected())
-		{
-			return false;
-		}
-
-		if (!mem_ptr2.is_connected())
-		{
-			return false;
-		}
-
-		mem_ptr1.raise(true, "hello");
-		mem_ptr2.raise(false, "goodbye");
-
-		mem_ptr1.bind(true, "hiya");
-		mem_ptr2.bind(false, "see ya");
-
-		mem_ptr1.raise();
-		mem_ptr2.raise();
-
-		mem_ptr1.detach();
-		mem_ptr2.detach();
-
-		if (mem_ptr1.is_connected())
-		{
-			return false;
-		}
-
-		if (mem_ptr2.is_connected())
-		{
-			return false;
-		}
-
-		return true;
-	}
-
-	bool memPtrTest3()
-	{
-		MemPtrTest test;
-		Signal::mem_ptr<void,MemPtrTest,bool,std::string&>
-			mem_ptr1(test);
-		Signal::mem_ptr<void,MemPtrTest,bool,std::string&>
-			mem_ptr2(test,&MemPtrTest::bool_stringRef);
-
-		mem_ptr1.attach(&MemPtrTest::bool_stringRef);
-
-		if (!mem_ptr1.is_connected())
-		{
-			return false;
-		}
-
-		if (!mem_ptr2.is_connected())
-		{
-			return false;
-		}
-
-		std::string str1 = "hello";
-		std::string str2 = "goodbye";
-		mem_ptr1.raise(true, str1);
-		mem_ptr2.raise(false, str2);
-
-		str1 = "hiya";
-		str2 = "see ya";
-		mem_ptr1.bind(true, str1);
-		mem_ptr2.bind(false, str2);
-
-		mem_ptr1.raise();
-		mem_ptr2.raise();
-
-		mem_ptr1.detach();
-		mem_ptr2.detach();
-
-		if (mem_ptr1.is_connected())
-		{
-			return false;
-		}
-
-		if (mem_ptr2.is_connected())
-		{
-			return false;
-		}
-
-		return true;
-	}
-
-	bool memPtrTest4()
-	{
-		MemPtrTest test;
-		Signal::mem_ptr<void,MemPtrTest,int,const std::string&>
-			mem_ptr1(test);
-		Signal::mem_ptr<void,MemPtrTest,int,const std::string&>
-			mem_ptr2(test,&MemPtrTest::int_constStringRef_const);
-
-		mem_ptr1.attach(&MemPtrTest::int_constStringRef_const);
-
-		if (!mem_ptr1.is_connected())
-		{
-			return false;
-		}
-
-		if (!mem_ptr2.is_connected())
-		{
-			return false;
-		}
-
-		mem_ptr1.raise(3,"heyo!");
-		mem_ptr2.raise(4,"peace out!");
-
-		mem_ptr1.bind(3,"heyo!");
-		mem_ptr2.bind(4,"peace out!");
-
-		mem_ptr1.raise();
-		mem_ptr2.raise();
-
-		mem_ptr1.detach();
-		mem_ptr2.detach();
-
-		if (mem_ptr1.is_connected())
-		{
-			return false;
-		}
-
-		if (mem_ptr2.is_connected())
-		{
-			return false;
-		}
-
-		return true;
-	}
-
-	bool memPtrTest5()
-	{
-		MemPtrTest test;
-		Signal::mem_ptr<void,MemPtrTest,int,char*,void*>
-			mem_ptr1(test);
-		Signal::mem_ptr<void,MemPtrTest,int,char*,void*>
-			mem_ptr2(test,&MemPtrTest::int_charPtr_voidPtr);
-
-		mem_ptr1.attach(&MemPtrTest::int_charPtr_voidPtr);
-
-		if (!mem_ptr1.is_connected())
-		{
-			return false;
-		}
-
-		if (!mem_ptr2.is_connected())
-		{
-			return false;
-		}
-
-		char
-		str1[] = "hello",
-		str2[] = "how's it going?",
-		str3[] = "goodbye",
-		str4[] = "take care",
-		str5[] = "hiya",
-		str6[] = "what's up?",
-		str7[] = "see ya",
-		str8[] = "have a good day!";
-
-		mem_ptr1.raise(1, str1, str2);
-		mem_ptr2.raise(2, str3, str4);
-
-		mem_ptr1.bind(1, str5, str6);
-		mem_ptr2.bind(2, str7, str8);
-
-		mem_ptr1.raise();
-		mem_ptr2.raise();
-
-		mem_ptr1.detach();
-		mem_ptr2.detach();
-
-		if (mem_ptr1.is_connected())
-		{
-			return false;
-		}
-
-		if (mem_ptr2.is_connected())
-		{
-			return false;
-		}
-
-		return true;
-	}
-
-	bool memPtrTest6()
-	{
-		MemPtrTest test;
-		Signal::mem_ptr<void,MemPtrTest,int,const char*,const void*>
-			mem_ptr1(test);
-		Signal::mem_ptr<void,MemPtrTest,int,const char*,const void*>
-			mem_ptr2(test,&MemPtrTest::int_constCharPtr_constVoidPtr);
-
-		mem_ptr1.attach(&MemPtrTest::int_constCharPtr_constVoidPtr);
-
-		if (!mem_ptr1.is_connected())
-		{
-			return false;
-		}
-
-		if (!mem_ptr2.is_connected())
-		{
-			return false;
-		}
-
-		mem_ptr1.raise(1, "hello", "how's it going?");
-		mem_ptr2.raise(2, "goodbye", "take care");
-
-		mem_ptr1.bind(1, "hiya", "what's up?");
-		mem_ptr2.bind(2, "see ya", "have a good day!");
-
-		mem_ptr1.raise();
-		mem_ptr2.raise();
-
-		mem_ptr1.detach();
-		mem_ptr2.detach();
-
-		if (mem_ptr1.is_connected())
-		{
-			return false;
-		}
-
-		if (mem_ptr2.is_connected())
-		{
-			return false;
-		}
-
-		return true;
-	}
-
-	bool memPtrTest7()
-	{
-		MemPtrTest test;
-		Signal::mem_ptr<MemPtrTest&,MemPtrTest,void>
-			mem_ptr1(test);
-		Signal::mem_ptr<MemPtrTest&,MemPtrTest,void>
-			mem_ptr2(test,&MemPtrTest::void_);
-
-		mem_ptr1.attach(&MemPtrTest::void_);
-
-		if (!mem_ptr1.is_connected())
-		{
-			return false;
-		}
-
-		if (!mem_ptr2.is_connected())
-		{
-			return false;
-		}
-
-		MemPtrTest obj1 = mem_ptr1.raise();
-		MemPtrTest obj2 = mem_ptr2.raise();
-
-		mem_ptr1.detach();
-		mem_ptr2.detach();
-
-		if (mem_ptr1.is_connected())
-		{
-			return false;
-		}
-
-		if (mem_ptr2.is_connected())
-		{
-			return false;
-		}
-
-		return true;
-	}
-
-	bool memPtrTest8()
-	{
-		MemPtrTest test;
-		Signal::mem_ptr<void,MemPtrTest,void>
-			mem_ptr1(test);
-		Signal::mem_ptr<void,MemPtrTest,void>
-			mem_ptr2(test,&MemPtrTest::void_const);
-
-		mem_ptr1.attach(&MemPtrTest::void_const);
-
-		if (!mem_ptr1.is_connected())
-		{
-			return false;
-		}
-
-		if (!mem_ptr2.is_connected())
-		{
-			return false;
-		}
-
-		mem_ptr1.raise();
-		mem_ptr2.raise();
-
-		mem_ptr1.detach();
-		mem_ptr2.detach();
-
-		if (mem_ptr1.is_connected())
-		{
-			return false;
-		}
-
-		if (mem_ptr2.is_connected())
-		{
-			return false;
-		}
-
-		return true;
-	}
-
-	void runMemPtrSuite()
-	{
-		if (!memPtrTest1())
-			std::cout << "failed test 1" << std::endl;
-		else
-			std::cout << "passed test 1" << std::endl;
-
-		if (!memPtrTest2())
-			std::cout << "failed test 2" << std::endl;
-		else
-			std::cout << "passed test 2" << std::endl;
-
-		if (!memPtrTest3())
-			std::cout << "failed test 3" << std::endl;
-		else
-			std::cout << "passed test 3" << std::endl;
-
-		if (!memPtrTest4())
-			std::cout << "failed test 4" << std::endl;
-		else
-			std::cout << "passed test 4" << std::endl;
-
-		if (!memPtrTest5())
-			std::cout << "failed test 5" << std::endl;
-		else
-			std::cout << "passed test 5" << std::endl;
-
-		if (!memPtrTest6())
-			std::cout << "failed test 6" << std::endl;
-		else
-			std::cout << "passed test 6" << std::endl;
-
-		if (!memPtrTest7())
-			std::cout << "failed test 7" << std::endl;
-		else
-			std::cout << "passed test 7" << std::endl;
-
-		if (!memPtrTest8())
-			std::cout << "failed test 8" << std::endl;
-		else
-			std::cout << "passed test 8" << std::endl;
-	}
-
-	//=================================================================
-
-	bool fcnPtrTest1()
-	{
-		Signal::fcn_ptr<void,bool,const std::string&>
-			fcn_ptr1;
-		Signal::fcn_ptr<void,bool,const std::string&>
-			fcn_ptr2(&FcnPtrTest::bool_constStringRef);
-
-		fcn_ptr1.attach(&FcnPtrTest::bool_constStringRef);
-
-		if (!fcn_ptr1.is_connected())
-		{
-			return false;
-		}
-
-		if (!fcn_ptr2.is_connected())
-		{
-			return false;
-		}
-
-		fcn_ptr1.raise(true, "hello");
-		fcn_ptr2.raise(false, "goodbye");
-
-		fcn_ptr1.bind(true, "hiya");
-		fcn_ptr2.bind(false, "see ya");
-
-		fcn_ptr1.raise();
+		fcn_ptr2.bind("hello", 1);
 		fcn_ptr2.raise();
 
-		fcn_ptr1.detach();
-		fcn_ptr2.detach();
-
-		if (fcn_ptr1.is_connected())
-		{
-			return false;
-		}
-
-		if (fcn_ptr2.is_connected())
-		{
-			return false;
-		}
-
-		return true;
-	}
-
-	bool fcnPtrTest2()
-	{
-		Signal::fcn_ptr<void,bool,std::string>
-			fcn_ptr1;
-		Signal::fcn_ptr<void,bool,std::string>
-			fcn_ptr2(&FcnPtrTest::bool_string);
-
-		fcn_ptr1.attach(&FcnPtrTest::bool_string);
-
-		if (!fcn_ptr1.is_connected())
-		{
-			return false;
-		}
-
-		if (!fcn_ptr2.is_connected())
-		{
-			return false;
-		}
-
-		fcn_ptr1.raise(true, "hello");
-		fcn_ptr2.raise(false, "goodbye");
-
-		fcn_ptr1.bind(true, "hiya");
-		fcn_ptr2.bind(false, "see ya");
+		fcn_ptr2.raise("sup", 100);
 
 		fcn_ptr1.raise();
+		fcn_ptr3.raise();
+
+		AbortIfNot(fcn_ptr1.attach(&test_funcs::func4), false);
+		AbortIfNot(fcn_ptr2.attach(&test_funcs::func5), false);
+		AbortIfNot(fcn_ptr3.attach(&test_funcs::func6), false);
+
+		fcn_ptr2.bind("hello again!", 2);
 		fcn_ptr2.raise();
 
-		fcn_ptr1.detach();
-		fcn_ptr2.detach();
-
-		if (fcn_ptr1.is_connected())
-		{
-			return false;
-		}
-
-		if (fcn_ptr2.is_connected())
-		{
-			return false;
-		}
-
-		return true;
-	}
-
-	bool fcnPtrTest3()
-	{
-		Signal::fcn_ptr<void,bool,std::string&>
-			fcn_ptr1;
-		Signal::fcn_ptr<void,bool,std::string&>
-			fcn_ptr2(&FcnPtrTest::bool_stringRef);
-
-		fcn_ptr1.attach(&FcnPtrTest::bool_stringRef);
-
-		if (!fcn_ptr1.is_connected())
-		{
-			return false;
-		}
-
-		if (!fcn_ptr2.is_connected())
-		{
-			return false;
-		}
-
-		std::string str1 = "hello";
-		std::string str2 = "goodbye";
-		fcn_ptr1.raise(true, str1);
-		fcn_ptr2.raise(false, str2);
-
-		str1 = "hiya";
-		str2 = "see ya";
-		fcn_ptr1.bind(true, str1);
-		fcn_ptr2.bind(false, str2);
+		fcn_ptr2.raise("sup yo", 200);
 
 		fcn_ptr1.raise();
-		fcn_ptr2.raise();
+		fcn_ptr3.raise();
 
-		fcn_ptr1.detach();
-		fcn_ptr2.detach();
-
-		if (fcn_ptr1.is_connected())
-		{
-			return false;
-		}
-
-		if (fcn_ptr2.is_connected())
-		{
-			return false;
-		}
+		AbortIfNot(fcn_ptr1.detach(), false);
+		AbortIfNot(fcn_ptr2.detach(), false);
+		AbortIfNot(fcn_ptr3.detach(), false);
+		AbortIf(fcn_ptr1.is_connected(), false);
+		AbortIf(fcn_ptr2.is_connected(), false);
+		AbortIf(fcn_ptr3.is_connected(), false);
 
 		return true;
-	}
-
-	bool fcnPtrTest4()
-	{
-		Signal::fcn_ptr<void,int,char*,void*>
-			fcn_ptr1;
-		Signal::fcn_ptr<void,int,char*,void*>
-			fcn_ptr2(&FcnPtrTest::int_charPtr_voidPtr);
-
-		fcn_ptr1.attach(&FcnPtrTest::int_charPtr_voidPtr);
-
-		if (!fcn_ptr1.is_connected())
-		{
-			return false;
-		}
-
-		if (!fcn_ptr2.is_connected())
-		{
-			return false;
-		}
-
-		char
-		str1[] = "hello",
-		str2[] = "how's it going?",
-		str3[] = "goodbye",
-		str4[] = "take care",
-		str5[] = "hiya",
-		str6[] = "what's up?",
-		str7[] = "see ya",
-		str8[] = "have a good day!";
-
-		fcn_ptr1.raise(1, str1, str2);
-		fcn_ptr2.raise(2, str3, str4);
-
-		fcn_ptr1.bind(1, str5, str6);
-		fcn_ptr2.bind(2, str7, str8);
-
-		fcn_ptr1.raise();
-		fcn_ptr2.raise();
-
-		fcn_ptr1.detach();
-		fcn_ptr2.detach();
-
-		if (fcn_ptr1.is_connected())
-		{
-			return false;
-		}
-
-		if (fcn_ptr2.is_connected())
-		{
-			return false;
-		}
-
-		return true;
-	}
-
-	bool fcnPtrTest5()
-	{
-		Signal::fcn_ptr<void,int,const char*,const void*>
-			fcn_ptr1;
-		Signal::fcn_ptr<void,int,const char*,const void*>
-			fcn_ptr2(&FcnPtrTest::int_constCharPtr_constVoidPtr);
-
-		fcn_ptr1.attach(&FcnPtrTest::int_constCharPtr_constVoidPtr);
-
-		if (!fcn_ptr1.is_connected())
-		{
-			return false;
-		}
-
-		if (!fcn_ptr2.is_connected())
-		{
-			return false;
-		}
-
-		fcn_ptr1.raise(1, "hello", "how's it going?");
-		fcn_ptr2.raise(2, "goodbye", "take care");
-
-		fcn_ptr1.bind(1, "hiya", "what's up?");
-		fcn_ptr2.bind(2, "see ya", "have a good day!");
-
-		fcn_ptr1.raise();
-		fcn_ptr2.raise();
-
-		fcn_ptr1.detach();
-		fcn_ptr2.detach();
-
-		if (fcn_ptr1.is_connected())
-		{
-			return false;
-		}
-
-		if (fcn_ptr2.is_connected())
-		{
-			return false;
-		}
-
-		return true;
-	}
-
-	bool fcnPtrTest6()
-	{
-		Signal::fcn_ptr<FcnPtrTest,void>
-			fcn_ptr1;
-		Signal::fcn_ptr<FcnPtrTest,void>
-			fcn_ptr2(&FcnPtrTest::void_);
-
-		fcn_ptr1.attach(&FcnPtrTest::void_);
-
-		if (!fcn_ptr1.is_connected())
-		{
-			return false;
-		}
-
-		if (!fcn_ptr2.is_connected())
-		{
-			return false;
-		}
-
-		FcnPtrTest obj1 = fcn_ptr1.raise();
-		FcnPtrTest obj2 = fcn_ptr2.raise();
-
-		fcn_ptr1.detach();
-		fcn_ptr2.detach();
-
-		if (fcn_ptr1.is_connected())
-		{
-			return false;
-		}
-
-		if (fcn_ptr2.is_connected())
-		{
-			return false;
-		}
-
-		return true;
-	}
-
-	void runFcnPtrSuite()
-	{
-		if (!fcnPtrTest1())
-			std::cout << "failed test 1" << std::endl;
-		else
-			std::cout << "passed test 1" << std::endl;
-
-		if (!fcnPtrTest2())
-			std::cout << "failed test 2" << std::endl;
-		else
-			std::cout << "passed test 2" << std::endl;
-
-		if (!fcnPtrTest3())
-			std::cout << "failed test 3" << std::endl;
-		else
-			std::cout << "passed test 3" << std::endl;
-
-		if (!fcnPtrTest4())
-			std::cout << "failed test 4" << std::endl;
-		else
-			std::cout << "passed test 4" << std::endl;
-
-		if (!fcnPtrTest5())
-			std::cout << "failed test 5" << std::endl;
-		else
-			std::cout << "passed test 5" << std::endl;
-
-		if (!fcnPtrTest6())
-			std::cout << "failed test 6" << std::endl;
-		else
-			std::cout << "passed test 6" << std::endl;
 	}
 };
 
-class SignalTestSuite
+class signal_test
 {
+
 public:
 
-	SignalTestSuite()
+	bool run()
 	{
-	}
+		test_class obj1;
+		test_class obj2;
 
-	~SignalTestSuite()
-	{
-	}
+		Signal::Signal<void> _sig_v;
+		Signal::Signal<void,const std::string&, int> _sig_v_s_i;
+		Signal::Signal<std::string> _sig_s;
 
-	bool runTest1()
-	{
-		MemPtrTest mpTest;
 
-		Signal::Signal<void,bool,const std::string&>
-			sig1;
-		Signal::Signal<void,int,const char*,const void*>
-			sig2(&FcnPtrTest::int_constCharPtr_constVoidPtr);
+		Signal::Signal<void>
+			_sig_v2(&test_funcs::func1);
 
-		Signal::Signal<void,int,char*,void*>
-			sig3(mpTest,&MemPtrTest::int_charPtr_voidPtr);
+		Signal::Signal<void,const std::string&, int>
+			_sig_v_s_i2(obj1, &test_class::func2);
 
-		Signal::Signal<void,int,const std::string&>
-			sig4(mpTest,&MemPtrTest::int_constStringRef_const);
+		Signal::Signal<std::string>
+			_sig_s2(obj1, &test_class::func3);
 
-		if ( sig1.is_connected() ||
-			!sig2.is_connected() ||
-			!sig3.is_connected() ||
-			!sig4.is_connected())
-			return false;
-		
-		if (!sig1.attach(&FcnPtrTest::bool_constStringRef))
-			return false;
 
-		if (!sig1.is_connected())
-			return false;
+		AbortIfNot(_sig_v.attach(&test_funcs::func1),
+			false);
+		AbortIfNot(_sig_v_s_i.attach(obj1, &test_class::func2),
+			false);
+		AbortIfNot(_sig_s.attach(obj1, &test_class::func3),
+			false);
 
-		if (!sig3.detach() ||
-			!sig3.attach(mpTest,&MemPtrTest::int_charPtr_voidPtr))
-			return false;
+		AbortIfNot(_sig_v.is_connected(), false);
+		AbortIfNot(_sig_v_s_i.is_connected(), false);
+		AbortIfNot(_sig_s.is_connected(), false);
 
-		if (!sig4.detach() || 
-			!sig4.attach(mpTest,&MemPtrTest::int_constStringRef_const))
-			return false;
+		AbortIfNot(_sig_v2.is_connected(), false);
+		AbortIfNot(_sig_v_s_i2.is_connected(), false);
+		AbortIfNot(_sig_s2.is_connected(), false);
 
-		if (!sig3.attach(&MemPtrTest::int_charPtr_voidPtr))
-			return false;
+		auto sig_v      = std::move(_sig_v);
+		auto sig_v_s_i  = std::move(_sig_v_s_i);
+		auto sig_s      = std::move(_sig_s);
 
-		if (!sig4.attach(&MemPtrTest::int_constStringRef_const))
-			return false;
+		auto sig_v2     = std::move(_sig_v2);
+		auto sig_v_s_i2 = std::move(_sig_v_s_i2);
+		auto sig_s2     = std::move(_sig_s2);
 
-		sig1.raise(true,"test 1");
-		sig2.raise(5,"test 2.1", "test 2.2");
+		sig_v.raise();
+		sig_v_s_i.raise("hello", 3);
+		sig_s.raise();
 
-		char str1[] = "test 3";
-		char str2[] = "test 4";
-		sig3.raise(6,str1,str2);
-		sig4.raise(7,"test 5");
+		sig_v2.raise();
+		sig_v_s_i2.raise("hello again!", 4);
+		sig_s2.raise();
 
-		sig1.bind(false,"test 6");
-		sig2.bind(8,"test 7", "test 8");
+		sig_v_s_i2.bind("hello yet again!", 5);
+		sig_v_s_i2.raise();
 
-		char str3[] = "test 9";
-		char str4[] = "test 10";
-		sig3.bind(9,str3,str4);
-		sig4.bind(10,"test 11");
+		AbortIfNot(sig_v_s_i.attach(&test_class::func5),
+			false);
+		AbortIfNot(sig_s.attach(obj1, &test_class::func6),
+			false);
 
-		sig1.raise();
-		sig2.raise();
-		sig3.raise();
-		sig4.raise();
+		sig_v_s_i.raise("bye", 6);
+		sig_s.raise();
+
+		AbortIfNot(sig_v.attach(&test_funcs::func4),
+			false);
+		AbortIfNot(sig_v_s_i.attach(obj2, &test_class::func2),
+			false);
+		AbortIfNot(sig_s.attach(obj2, &test_class::func3),
+			false);
+
+		sig_v.raise();
+		sig_v_s_i.raise("so long!", 7);
+		sig_s.raise();
+
+		AbortIfNot(sig_v.detach(), false);
+		AbortIfNot(sig_v_s_i.detach(), false);
+		AbortIfNot(sig_s.detach(), false);
+		AbortIfNot(sig_v2.detach(), false);
+		AbortIfNot(sig_v_s_i2.detach(), false);
+		AbortIfNot(sig_s2.detach(), false);
+
+		AbortIf(sig_v.is_connected(), false);
+		AbortIf(sig_v_s_i.is_connected(), false);
+		AbortIf(sig_s.is_connected(), false);
+		AbortIf(sig_v2.is_connected(), false);
+		AbortIf(sig_v_s_i2.is_connected(), false);
+		AbortIf(sig_s2.is_connected(), false);
+
+		AbortIfNot(sig_v.attach(&test_funcs::func4),
+			false);
+		AbortIfNot(sig_v_s_i.attach(obj2, &test_class::func2),
+			false);
+		AbortIfNot(sig_s.attach(obj2, &test_class::func3),
+			false);
 
 		return true;
 	}
+};
 
-	bool runTest2()
+class callable_test
+{
+
+public:
+
+	bool run()
 	{
-		MemPtrTest mpTest;
+		test_class obj;
 
-		Signal::Signal<FcnPtrTest,void>
-			sig1;
+		Signal::Callable<test_class> callable1;
+		Signal::Callable<test_class> callable2(obj);
 
-		Signal::Signal<MemPtrTest&,void>
-			sig2(mpTest,&MemPtrTest::void_);
+		AbortIf(callable1.is_connected(),
+			false);
+		AbortIfNot(callable2.is_connected(),
+			false);
 
-		Signal::Signal<void,void>
-			sig3(mpTest,&MemPtrTest::void_const);
+		AbortIfNot(callable1.attach(obj),
+			false);
+		AbortIfNot(callable1.is_connected(),
+			false);
 
-		Signal::Signal<FcnPtrTest,void>
-			sig4(&FcnPtrTest::void_);
+		callable1.raise("sup?");
+		callable2.raise("not much.");
 
-		if ( sig1.is_connected() ||
-			!sig2.is_connected() ||
-			!sig3.is_connected() ||
-			!sig4.is_connected())
-			return false;
-		
-		if (!sig1.attach(&FcnPtrTest::void_))
-			return false;
+		AbortIfNot(callable1.detach(), false);
+		AbortIfNot(callable2.detach(), false);
 
-		if (!sig1.is_connected())
-			return false;
-
-		if (!sig2.detach() ||
-			!sig2.attach(mpTest, &MemPtrTest::void_))
-			return false;
-
-		if (!sig2.attach(&MemPtrTest::void_))
-			return false;
-
-		if (!sig3.detach() || 
-			!sig3.attach(mpTest,&MemPtrTest::void_const))
-			return false;
-
-		if (!sig3.attach(&MemPtrTest::void_const))
-			return false;
-
-		FcnPtrTest test1 = sig1.raise();
-		MemPtrTest test2 = sig2.raise();
-		sig3.raise();
+		AbortIf(callable1.is_connected(), false);
+		AbortIf(callable2.is_connected(), false);
 
 		return true;
-	}
-
-	void run()
-	{
-		if (!runTest1())
-			std::cout << "Failed test suite 1" << std::endl;
-		else
-			std::cout << "Passed test suite 1" << std::endl;
-
-		if (!runTest2())
-			std::cout << "Failed test suite 2" << std::endl;
-		else
-			std::cout << "Passed test suite 2" << std::endl;
 	}
 };
 
 int main()
 {
-	SignalTest test1, test2;
-	test1.runMemPtrSuite();
-	test2.runFcnPtrSuite();
+	mem_ptr_test test1;
+	AbortIfNot(test1.run(), 1);
 
-	SignalTestSuite suite;
-	suite.run();
+	std::cout << "\n";
+	
+	fcn_ptr_test test2;
+	AbortIfNot(test2.run(), 1);
 
+	std::cout << "\n";
+
+	signal_test test3;
+	AbortIfNot(test3.run(), 1);
+
+	callable_test test4;
+	AbortIfNot(test4.run(), 1);
+
+	std::cout << "Test complete."
+		<< std::endl;
 	return 0;
 }
