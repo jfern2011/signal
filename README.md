@@ -3,7 +3,7 @@
 Create customized "signals" that, when raised, are handled by user-
 defined handlers. Signals can be tailored to run with class
 methods, function pointers, and function objects in general, making
-them well-suited for use in event-driven software
+them well-suited for use in event-driven software.
 
 To use this, simply include Signal.h and be sure to compile with
 --std=c++11 (at least)
@@ -229,11 +229,11 @@ need to polymorphically reference the two
 
 ## Signal::generic
 
-This is the base class of signal_t and requires no arguments. It only
-really exists because I thought it'd be convenient to be able to have a
-container of signals, each with different template parameters. For
-example, I might have a std::vector< generic > containing all sorts of
-mem_ptrs and fcn_ptrs.
+This is the base class of signal_t and requires no template arguments.
+It only really exists because I thought it'd be convenient to be able
+to have a container of signals, each with different template
+parameters. For example, I might have a std::vector< generic >
+containing all sorts of mem_ptrs and fcn_ptrs.
 
 ## Signal::Callable
 
