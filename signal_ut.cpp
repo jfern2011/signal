@@ -137,7 +137,9 @@ public:
 		AbortIfNot(mem_ptr3.attach(&test_class::func6), false);
 
 		mem_ptr2.bind("hello again!", 2);
-		mem_ptr2.raise();
+
+		Signal::generic* gen_sig = &mem_ptr2;
+		gen_sig->v_raise();
 
 		mem_ptr2.raise("sup yo", 200);
 
@@ -190,7 +192,9 @@ public:
 		AbortIfNot(fcn_ptr3.attach(&test_funcs::func6), false);
 
 		fcn_ptr2.bind("hello again!", 2);
-		fcn_ptr2.raise();
+
+		Signal::generic* gen_sig = &fcn_ptr2;
+		gen_sig->v_raise();
 
 		fcn_ptr2.raise("sup yo", 200);
 
@@ -265,7 +269,9 @@ public:
 		sig_s2.raise();
 
 		sig_v_s_i2.bind("hello yet again!", 5);
-		sig_v_s_i2.raise();
+
+		Signal::generic* gen_sig = &sig_v_s_i2;
+		gen_sig->v_raise();
 
 		AbortIfNot(sig_v_s_i.attach(&test_class::func5),
 			false);

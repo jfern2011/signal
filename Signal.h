@@ -1,3 +1,11 @@
+/**
+ *  \file   Signal.h
+ *  \author Jason Fernandez
+ *  \date   10/13/2017
+ *
+ *  https://github.com/jfern2011/signal
+ */
+
 #ifndef __SIGNAL_H__
 #define __SIGNAL_H__
 
@@ -44,17 +52,18 @@ namespace Signal
     /**
      ******************************************************************
      *
-     * @class signal_base
+     * @class generic
      *
      * Allows for invoking signal handlers through a single (abstract)
      * class, regardless of signal type
      *
      ******************************************************************
      */
-    class signal_base
+    class generic
     {
     public:
-        virtual ~signal_base() {}
+        virtual void v_raise() = 0;
+        virtual ~generic() {}
     };
 
     /**
@@ -72,7 +81,7 @@ namespace Signal
      ******************************************************************
      */
     template <class R, class... T>
-    class signal_t : public signal_base
+    class signal_t : public generic
     {
     public:
 
@@ -259,6 +268,19 @@ namespace Signal
                 run(typename gens<sizeof...(A)>::type());
         }
 
+        /**
+         * Forward bound arguments to the signal handler. Note this
+         * will fail if no handler is currently attached, which can
+         * be verified with is_connected()
+         *
+         * This is equivalent to \ref raise() except that it can be
+         * invoked through a \ref generic
+         */
+        void v_raise()
+        {
+            raise();
+        }
+
     protected:
 
         template<int... S>
@@ -409,6 +431,19 @@ namespace Signal
                 run(typename gens<sizeof...(A)>::type());
         }
 
+        /**
+         * Forward bound arguments to the signal handler. Note this
+         * will fail if no handler is currently attached, which can
+         * be verified with is_connected()
+         *
+         * This is equivalent to \ref raise() except that it can be
+         * invoked through a \ref generic
+         */
+        void v_raise()
+        {
+            raise();
+        }
+
     protected:
 
         template<int... S>
@@ -442,7 +477,7 @@ namespace Signal
      ******************************************************************
      */
     template <class R, class... A>
-    class Signal : public signal_base
+    class Signal : public generic
     {
     public:
 
@@ -510,8 +545,8 @@ namespace Signal
         /**
          * Move constructor
          *
-         * @param [in] rhs A Signal to move into *this. \a rhs is
-         *                 left detached
+         * @param [in] rhs A Signal to move into *this. This leaves
+         *                 \a rhs detached
          */
         Signal(Signal<R,A...>&& rhs)
         {
@@ -521,8 +556,8 @@ namespace Signal
         /**
          * Move assignment operator
          *
-         * @param [in] rhs A Signal to move into *this. \a rhs is
-         *                 left detached
+         * @param [in] rhs A Signal to move into *this. This leaves
+         *                 \a rhs detached
          *
          * @return *this
          */
@@ -728,6 +763,19 @@ namespace Signal
         {
             return
                 run(typename gens<sizeof...(A)>::type());
+        }
+
+        /**
+         * Forward bound arguments to the signal handler. Note this
+         * will fail if no handler is currently attached, which can
+         * be verified with is_connected()
+         *
+         * This is equivalent to \ref raise() except that it can be
+         * invoked through a \ref generic
+         */
+        void v_raise()
+        {
+            raise();
         }
 
         /*
