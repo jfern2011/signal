@@ -61,9 +61,13 @@ namespace Signal
      */
     class generic
     {
+
     public:
-        virtual void v_raise() = 0;
+
         virtual ~generic() {}
+
+        virtual bool is_connected() const = 0;
+        virtual void v_raise() = 0;
     };
 
     /**
@@ -87,7 +91,6 @@ namespace Signal
 
         virtual R raise(T...) = 0;
         virtual bool detach() = 0;
-        virtual bool is_connected() const = 0;
         virtual ~signal_t() {}
     };
 
