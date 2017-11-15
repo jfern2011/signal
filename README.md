@@ -284,8 +284,7 @@ classes, but the namespace feels incomplete without it.
 
 A lot of the material here probably wouldn't exist (at least not for a
 while) without help from Stack Overflow, particularly those who took
-the time to talk to me about my template metaprogramming problems. You
-guys rock!
+the time to talk to me about my template metaprogramming problems :D
 
 ## Contact
 
