@@ -87,11 +87,14 @@ namespace Signal
     template <class R, class... T>
     class signal_t : public generic
     {
+
     public:
 
-        virtual R raise(T...) = 0;
-        virtual bool detach() = 0;
         virtual ~signal_t() {}
+        
+        virtual signal_t<R,T...>* clone() const = 0;
+        virtual bool detach() = 0;
+        virtual R raise(T...) = 0;
     };
 
     /**
@@ -213,6 +216,24 @@ namespace Signal
         void bind(T&&... args)
         {
             _sargs.args = std::make_tuple(std::forward<T>(args)...);
+        }
+
+        /**
+         * A factory method that creates a copy of this mem_ptr
+         *
+         * @return A \ref signal_t pointer to the newly created
+         *         object
+         */
+        signal_t<R,A...>* clone() const
+        {
+            mem_ptr<R,C,A...>* sig = new mem_ptr<R,C,A...>(_obj);
+
+            sig->_const_func = _const_func;
+            sig->_func       = _func;
+            sig->_is_init    = _is_init;
+            sig->_sargs      = _sargs;
+
+            return sig;
         }
 
         /**
@@ -385,6 +406,22 @@ namespace Signal
         }
 
         /**
+         * A factory method that creates a copy of this fcn_ptr
+         *
+         * @return A \ref signal_t pointer to the newly created
+         *         object
+         */
+        signal_t<R,A...>* clone() const
+        {
+            fcn_ptr<R,A...>* sig = new fcn_ptr<R,A...>( _func );
+
+            sig->_is_init    = _is_init;
+            sig->_sargs      = _sargs;
+
+            return sig;
+        }
+
+        /**
          * Detach the current signal handler
          *
          * @return True on success
@@ -538,6 +575,28 @@ namespace Signal
         }
 
         /**
+         * Copy constructor
+         *
+         * @param[in] other The Signal for which *this will be a copy
+         */
+        Signal(const Signal<R,A...>& other)
+            : _sig(NULL)
+        {
+            *this = other;
+        }
+
+        /**
+         * Move constructor
+         *
+         * @param [in] other A Signal to move into *this. This leaves
+         *                   \a other detached
+         */
+        Signal(Signal<R,A...>&& other)
+        {
+            *this = std::move( other );
+        }
+
+        /**
          * Destructor
          */
         ~Signal()
@@ -546,14 +605,22 @@ namespace Signal
         }
 
         /**
-         * Move constructor
+         * Copy assignment operator
          *
-         * @param [in] rhs A Signal to move into *this. This leaves
-         *                 \a rhs detached
+         * @param[in] rhs Another Signal to create a copy of
+         *
+         * @return *this
          */
-        Signal(Signal<R,A...>&& rhs)
+        Signal<R,A...>& operator=(const Signal<R,A...>& rhs)
         {
-            *this = std::move( rhs );
+            if (this != &rhs)
+            {
+                _is_mem_ptr = rhs._is_mem_ptr;
+                _sargs      = rhs._sargs;
+                _sig        = rhs._sig->clone();
+            }
+
+            return *this;
         }
 
         /**
@@ -782,11 +849,10 @@ namespace Signal
         }
 
         /*
-         * Forbid copy construction/assignment:
-         */
         Signal(const Signal<R,A...>& rhs)        = delete;
         Signal<R,A...>&
             operator=(const Signal<R,A...>& rhs) = delete;
+         */
 
     private:
 

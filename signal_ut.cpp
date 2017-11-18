@@ -146,6 +146,14 @@ public:
 		mem_ptr1.raise();
 		mem_ptr3.raise();
 
+		auto sig = mem_ptr2.clone();
+		sig->raise("I'm a mem_ptr clone!", 42);
+		auto sig2 = dynamic_cast<
+			Signal::mem_ptr<void,test_class,const std::string&,int>*
+			>(sig);
+		sig2->raise();
+		delete sig;
+
 		AbortIfNot(mem_ptr1.detach(), false);
 		AbortIfNot(mem_ptr2.detach(), false);
 		AbortIfNot(mem_ptr3.detach(), false);
@@ -200,6 +208,14 @@ public:
 
 		fcn_ptr1.raise();
 		fcn_ptr3.raise();
+
+		auto sig = fcn_ptr2.clone();
+		sig->raise("I'm a fcn_ptr clone!", 42);
+		auto sig2 = dynamic_cast<
+			Signal::fcn_ptr<void,const std::string&,int>*
+			>(sig);
+		sig2->raise();
+		delete sig;
 
 		AbortIfNot(fcn_ptr1.detach(), false);
 		AbortIfNot(fcn_ptr2.detach(), false);
@@ -291,6 +307,13 @@ public:
 		sig_v.raise();
 		sig_v_s_i.raise("so long!", 7);
 		sig_s.raise();
+
+		sig_v_s_i.bind("binding for clone...", 999);
+		auto sig(sig_v);
+		sig.raise();
+		auto sig2(sig_v_s_i);
+		sig2.raise("I'm a clone!", 42);
+		sig2.raise();
 
 		AbortIfNot(sig_v.detach(), false);
 		AbortIfNot(sig_v_s_i.detach(), false);
