@@ -618,9 +618,11 @@ namespace Signal
         {
             if (this != &rhs)
             {
+                if (_sig) delete _sig;
+
                 _is_mem_ptr = rhs._is_mem_ptr;
-                _sargs      = rhs._sargs;
-                _sig        = rhs._sig->clone();
+                _sargs = rhs._sargs;
+                _sig = rhs._sig->clone();
             }
 
             return *this;
