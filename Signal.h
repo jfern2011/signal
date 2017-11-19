@@ -15,6 +15,8 @@
 
 namespace Signal
 {
+
+#ifndef DOXYGEN_SKIP
     /*
      * Utilities for generating integer sequences used for expanding
      * arguments to signal handlers:
@@ -48,6 +50,7 @@ namespace Signal
                    typename std::remove_reference<T>::type>::type...>
             args;
     };
+#endif
 
     /**
      ******************************************************************
@@ -79,12 +82,12 @@ namespace Signal
      * either a fcn_ptr or mem_ptr
      *
      * @tparam R  Signal handler return type
-     * @tparam T  Specifies the type(s) of each input argument to the
+     * @tparam A  Specifies the type(s) of each input argument to the
      *            signal handler
      *
      ******************************************************************
      */
-    template <class R, class... T>
+    template <class R, class... A>
     class signal_t : public generic
     {
 
@@ -92,9 +95,9 @@ namespace Signal
 
         virtual ~signal_t() {}
         
-        virtual signal_t<R,T...>* clone() const = 0;
+        virtual signal_t<R,A...>* clone() const = 0;
         virtual bool detach() = 0;
-        virtual R raise(T...) = 0;
+        virtual R raise(A...) = 0;
     };
 
     /**
@@ -219,7 +222,7 @@ namespace Signal
         }
 
         /**
-         * A factory method that creates a copy of this mem_ptr
+         *  A factory method that creates a copy of this object
          *
          * @return A \ref signal_t pointer to the newly created
          *         object
@@ -406,7 +409,7 @@ namespace Signal
         }
 
         /**
-         * A factory method that creates a copy of this fcn_ptr
+         *  A factory method that creates a copy of this object
          *
          * @return A \ref signal_t pointer to the newly created
          *         object
@@ -577,7 +580,7 @@ namespace Signal
         /**
          * Copy constructor
          *
-         * @param[in] other The Signal for which *this will be a copy
+         * @param [in] other The Signal of which *this will be a copy
          */
         Signal(const Signal<R,A...>& other)
             : _sig(NULL)
