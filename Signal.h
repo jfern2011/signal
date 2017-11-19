@@ -641,6 +641,8 @@ namespace Signal
         {
             if (this != &rhs)
             {
+                if (_sig) delete _sig;
+                
                 _is_mem_ptr = rhs._is_mem_ptr;
                 _sargs      = std::move ( rhs._sargs );
                 _sig = rhs._sig;
