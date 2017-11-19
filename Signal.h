@@ -595,6 +595,7 @@ namespace Signal
          *                   \a other detached
          */
         Signal(Signal<R,A...>&& other)
+            : _sig(NULL)
         {
             *this = std::move( other );
         }
