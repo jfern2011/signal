@@ -131,7 +131,7 @@ namespace Signal
          *                 handler
          */
         mem_ptr(C& obj)
-            : _const_func(NULL), _func(NULL), _is_init(false), _obj(obj)
+            : _const_func(nullptr), _func(nullptr), _is_init(false), _obj(obj)
         {
         }
 
@@ -144,9 +144,9 @@ namespace Signal
          *                 class C
          */
         mem_ptr(C& obj, const Handler func)
-            : _const_func(NULL), _func(func), _obj(obj)
+            : _const_func(nullptr), _func(func), _obj(obj)
         {
-            _is_init = _func != NULL;
+            _is_init = _func != nullptr;
         }
 
         /**
@@ -158,9 +158,9 @@ namespace Signal
          *                 is a member of class C
          */
         mem_ptr(C& obj, const const_Handler func)
-            : _const_func(func), _func(NULL), _obj(obj)
+            : _const_func(func), _func(nullptr), _obj(obj)
         {
-            _is_init = _const_func != NULL;
+            _is_init = _const_func != nullptr;
         }
 
         /**
@@ -180,11 +180,11 @@ namespace Signal
          */
         bool attach(const Handler func)
         {
-            if (func == NULL)
+            if (func == nullptr)
                 return false;
 
             _func = func;
-            _const_func = NULL;
+            _const_func = nullptr;
 
             _is_init = true;
             return true;
@@ -200,10 +200,10 @@ namespace Signal
          */
         bool attach(const const_Handler func)
         {
-            if (func == NULL)
+            if (func == nullptr)
                 return false;
 
-            _func = NULL;
+            _func = nullptr;
             _const_func = func;
 
             _is_init = true;
@@ -248,20 +248,20 @@ namespace Signal
         bool detach()
         {
             _is_init = false;
-            _const_func = NULL; _func = NULL;
+            _const_func = nullptr; _func = nullptr;
 
             return true;
         }
 
         /**
-         * Determine if this signal is currently attached
+         * Determine if this signal is currently attached via \ref
+         * attach()
          *
          * @return True if attached
          */
         bool is_connected() const
         {
-            return
-                !(_const_func == NULL && _func == NULL);
+            return !(_const_func == nullptr && _func == nullptr);
         }
 
         /**
@@ -275,7 +275,7 @@ namespace Signal
          */
         R raise(A... args)
         {
-            if (_func != NULL)
+            if (_func != nullptr)
                 return (_obj.*_func)(std::forward<A>(args)...);
             else
                 return
@@ -314,7 +314,7 @@ namespace Signal
         template<int... S>
         R run(seq<S...>)
         {
-            if (_func != NULL)
+            if (_func != nullptr)
                 return (_obj.*_func)(std::get<S>( _sargs.args)...);
             else
                 return
@@ -355,7 +355,7 @@ namespace Signal
          * Default constructor
          */
         fcn_ptr()
-            : _func(NULL), _is_init(false)
+            : _func(nullptr), _is_init(false)
         {
         }
 
@@ -368,7 +368,7 @@ namespace Signal
         fcn_ptr(const Handler func)
             : _func(func)
         {
-            _is_init = _func != NULL;
+            _is_init = _func != nullptr;
         }
 
         /**
@@ -388,7 +388,7 @@ namespace Signal
          */
         bool attach(const Handler func)
         {
-            if (func == NULL)
+            if (func == nullptr)
                 return false;
 
             _func = func;
@@ -432,7 +432,7 @@ namespace Signal
          */
         bool detach()
         {
-            _is_init = false; _func = NULL;
+            _is_init = false; _func = nullptr;
 
             return true;
         }
@@ -444,7 +444,7 @@ namespace Signal
          */
         bool is_connected() const
         {
-            return _func != NULL;
+            return _func != nullptr;
         }
 
         /**
@@ -529,7 +529,7 @@ namespace Signal
          * Default constructor
          */
         Signal()
-            : _is_mem_ptr(false), _sig(NULL)
+            : _is_mem_ptr(false), _sig(nullptr)
         {
         }
 
@@ -584,7 +584,7 @@ namespace Signal
          * @param [in] other The Signal of which *this will be a copy
          */
         Signal(const Signal<R,A...>& other)
-            : _sig(NULL)
+            : _sig(nullptr)
         {
             *this = other;
         }
@@ -596,7 +596,7 @@ namespace Signal
          *                   \a other detached
          */
         Signal(Signal<R,A...>&& other)
-            : _sig(NULL)
+            : _sig(nullptr)
         {
             *this = std::move( other );
         }
@@ -650,7 +650,7 @@ namespace Signal
                 _sig = rhs._sig;
                 
                 rhs._is_mem_ptr = false;
-                rhs._sig = NULL;
+                rhs._sig = nullptr;
             }
 
             return *this;
@@ -806,7 +806,7 @@ namespace Signal
         {
             if (!_sig) return false;
 
-            delete _sig; _sig = NULL;
+            delete _sig; _sig = nullptr;
             _is_mem_ptr = false;
 
             return true;
