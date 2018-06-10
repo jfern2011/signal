@@ -41,14 +41,18 @@ namespace Signal
     };
 
     /*
-     * A container for bound function arguments:
+     * A container for bound/forwarded function arguments:
      */
     template <class... T>
     struct SignalArgs
     {
         std::tuple<typename std::remove_const<
-                   typename std::remove_reference<T>::type>::type...>
+                   typename std::remove_reference<T>::type>::type ...>
             args;
+
+        std::tuple<typename std::remove_const<
+                   typename std::remove_reference<T>::type>::type*...>
+            ptrs;
     };
 #endif
 
@@ -131,7 +135,8 @@ namespace Signal
          *                 handler
          */
         mem_ptr(C& obj)
-            : _const_func(nullptr), _func(nullptr), _is_init(false), _obj(obj)
+            : _const_func(nullptr), _forward(false), _func(nullptr),
+              _is_init(false), _obj(obj)
         {
         }
 
@@ -144,7 +149,8 @@ namespace Signal
          *                 class C
          */
         mem_ptr(C& obj, const Handler func)
-            : _const_func(nullptr), _func(func), _obj(obj)
+            : _const_func(nullptr), _forward(false), _func(func),
+              _obj(obj)
         {
             _is_init = _func != nullptr;
         }
@@ -158,7 +164,8 @@ namespace Signal
          *                 is a member of class C
          */
         mem_ptr(C& obj, const const_Handler func)
-            : _const_func(func), _func(nullptr), _obj(obj)
+            : _const_func(func), _forward(false), _func(nullptr),
+              _obj(obj)
         {
             _is_init = _const_func != nullptr;
         }
@@ -220,6 +227,7 @@ namespace Signal
         void bind(T&&... args)
         {
             _sargs.args = std::make_tuple(std::forward<T>(args)...);
+            _forward = false;
         }
 
         /**
@@ -233,6 +241,7 @@ namespace Signal
             mem_ptr<R,C,A...>* sig = new mem_ptr<R,C,A...>(_obj);
 
             sig->_const_func = _const_func;
+            sig->_forward    = _forward;
             sig->_func       = _func;
             sig->_is_init    = _is_init;
             sig->_sargs      = _sargs;
@@ -251,6 +260,25 @@ namespace Signal
             _const_func = nullptr; _func = nullptr;
 
             return true;
+        }
+
+        /**
+         * Forward arguments to the signal handler. Unlike \ref bind(),
+         * which forwards copies, this will forward \a args by
+         * reference, e.g. in case they need to be modified within the
+         * signal handler
+         *
+         * @warning
+         * Forwarding references may lead to undefined behavior if you
+         * allow \a args to go out of scope
+         *
+         * @param[in] args Input arguments to implicitly forward
+         */
+        template <typename... T>
+        void forward(T&&... args)
+        {
+            _sargs.ptrs = std::make_tuple(&std::forward<T>(args)...);
+            _forward = true;
         }
 
         /**
@@ -314,15 +342,27 @@ namespace Signal
         template<int... S>
         R run(seq<S...>)
         {
-            if (_func != nullptr)
-                return (_obj.*_func)(std::get<S>( _sargs.args)...);
-            else
-                return
-                 (_obj.*_const_func)(std::get<S>( _sargs.args)...);
+            if (_forward)
+            {
+                if (_func != nullptr)
+                    return (_obj.*_func)(*std::get<S>(_sargs.ptrs)...);
+                else
+                    return
+                     (_obj.*_const_func)(*std::get<S>(_sargs.ptrs)...);
+            }
+            else // forward internal copies
+            {
+                if (_func != nullptr)
+                    return (_obj.*_func)( std::get<S>(_sargs.args)...);
+                else
+                    return
+                     (_obj.*_const_func)( std::get<S>(_sargs.args)...);
+            }
         }
 
         const_Handler
                 _const_func;
+        bool    _forward;
         Handler _func;
         bool    _is_init;
         C&      _obj;
@@ -355,7 +395,7 @@ namespace Signal
          * Default constructor
          */
         fcn_ptr()
-            : _func(nullptr), _is_init(false)
+            : _forward(false), _func(nullptr), _is_init(false)
         {
         }
 
@@ -366,9 +406,9 @@ namespace Signal
          *                 pointer
          */
         fcn_ptr(const Handler func)
-            : _func(func)
+            : _forward(false), _func(func)
         {
-            _is_init = _func != nullptr;
+            _is_init  =  _func != nullptr;
         }
 
         /**
@@ -401,12 +441,17 @@ namespace Signal
          * Bind arguments to the signal handler. This avoids having
          * to call raise() with explicit inputs
          *
+         * @note This creates internal copies of \a args to pass to
+         *       the signal handler. See \ref forward() if you wish
+         *       to forward references instead
+         *
          * @param[in] args Input arguments to implicitly forward
          */
         template <typename... T>
         void bind(T&&... args)
         {
             _sargs.args = std::make_tuple(std::forward<T>(args)...);
+            _forward = false;
         }
 
         /**
@@ -419,6 +464,7 @@ namespace Signal
         {
             fcn_ptr<R,A...>* sig = new fcn_ptr<R,A...>( _func );
 
+            sig->_forward    = _forward;
             sig->_is_init    = _is_init;
             sig->_sargs      = _sargs;
 
@@ -435,6 +481,25 @@ namespace Signal
             _is_init = false; _func = nullptr;
 
             return true;
+        }
+
+        /**
+         * Forward arguments to the signal handler. Unlike \ref bind(),
+         * which forwards copies, this will forward \a args by
+         * reference, e.g. in case they need to be modified within the
+         * signal handler
+         *
+         * @warning
+         * Forwarding references may lead to undefined behavior if you
+         * allow \a args to go out of scope
+         *
+         * @param[in] args Input arguments to implicitly forward
+         */
+        template <typename... T>
+        void forward(T&&... args)
+        {
+            _sargs.ptrs = std::make_tuple(&std::forward<T>(args)...);
+            _forward = true;
         }
 
         /**
@@ -493,9 +558,13 @@ namespace Signal
         template<int... S>
         R run(seq<S...>)
         {
-            return _func (std::get<S>( _sargs.args)... );
+            if (_forward)
+                return _func (*std::get<S>(_sargs.ptrs)... );    
+            else
+                return _func ( std::get<S>(_sargs.args)... );
         }
 
+        bool    _forward;
         Handler _func;
         bool    _is_init;
 
@@ -529,7 +598,7 @@ namespace Signal
          * Default constructor
          */
         Signal()
-            : _is_mem_ptr(false), _sig(nullptr)
+            : _forward(false), _is_mem_ptr(false), _sig(nullptr)
         {
         }
 
@@ -539,7 +608,7 @@ namespace Signal
          * @param[in] func A pointer to the signal handler
          */
         Signal(R(*func)(A...))
-            : _is_mem_ptr(false)
+            : _forward(false), _is_mem_ptr(false)
         {
             _sig = new fcn_ptr<R,A...>(func);
         }
@@ -556,7 +625,7 @@ namespace Signal
          */
         template <typename C>
         Signal(C& obj, R(C::*func)(A...))
-            : _is_mem_ptr(true)
+            : _forward(false), _is_mem_ptr(true)
         {
             _sig = new mem_ptr<R,C,A...>(obj, func);
         }
@@ -573,7 +642,7 @@ namespace Signal
          */
         template <typename C>
         Signal(C& obj, R(C::*func)(A...) const)
-            : _is_mem_ptr(true)
+            : _forward(false),_is_mem_ptr(true)
         {
             _sig = new mem_ptr<R,C,A...>(obj, func);
         }
@@ -622,6 +691,7 @@ namespace Signal
             {
                 if (_sig) delete _sig;
 
+                _forward    = rhs._forward;
                 _is_mem_ptr = rhs._is_mem_ptr;
                 _sargs = rhs._sargs;
                 _sig   = dynamic_cast<
@@ -645,6 +715,7 @@ namespace Signal
             {
                 if (_sig) delete _sig;
                 
+                _forward    = rhs._forward;
                 _is_mem_ptr = rhs._is_mem_ptr;
                 _sargs      = std::move ( rhs._sargs );
                 _sig = rhs._sig;
@@ -782,8 +853,8 @@ namespace Signal
         template <typename... T>
         void bind(T&&... args)
         {
-            _sargs.args =
-                std::make_tuple(std::forward<T>(args)...);
+            _sargs.args =  std::make_tuple(std::forward<T>(args)...);
+            _forward = false;
         }
 
         /**
@@ -810,6 +881,25 @@ namespace Signal
             _is_mem_ptr = false;
 
             return true;
+        }
+
+        /**
+         * Forward arguments to the signal handler. Unlike \ref bind(),
+         * which forwards copies, this will forward \a args by
+         * reference, e.g. in case they need to be modified within the
+         * signal handler
+         *
+         * @warning
+         * Forwarding references may lead to undefined behavior if you
+         * allow \a args to go out of scope
+         *
+         * @param[in] args Input arguments to implicitly forward
+         */
+        template <typename... T>
+        void forward(T&&... args)
+        {
+            _sargs.ptrs = std::make_tuple(&std::forward<T>(args)...);
+            _forward = true;
         }
 
         /**
@@ -880,9 +970,13 @@ namespace Signal
         template<int... S>
         R run(seq<S...>)
         {
-            return _sig->raise(std::get<S>( _sargs.args)... );
+            if (_forward)
+                return _sig->raise(*std::get<S>(_sargs.ptrs)... );
+            else
+                return _sig->raise( std::get<S>(_sargs.args)... );
         }
 
+        bool    _forward;
         bool    _is_mem_ptr;
 
         SignalArgs<A...> 
