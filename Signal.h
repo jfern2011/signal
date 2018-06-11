@@ -226,10 +226,15 @@ namespace Signal
         }
 
         /**
-         * Bind arguments to the signal handler
+         * Bind arguments to the signal handler. This avoids having
+         * to call raise() with explicit inputs
          *
-         * @param [in] args A set of arguments to implicitly pass to
-         *                  the handler
+         * @note This creates internal copies of \a args to pass to
+         *       the signal handler. See \ref forward() if you wish
+         *       to forward references instead
+         *
+         * @param[in] args Input arguments to implicitly forward
+         *                 to the handler
          */
         void bind(A... args)
         {
@@ -465,6 +470,7 @@ namespace Signal
          *       to forward references instead
          *
          * @param[in] args Input arguments to implicitly forward
+         *                 to the handler
          */
         void bind(A... args)
         {
@@ -859,10 +865,15 @@ namespace Signal
         }
 
         /**
-         * Bind arguments to the signal handler
+         * Bind arguments to the signal handler. This avoids having
+         * to call raise() with explicit inputs
          *
-         * @param[in] args The set of arguments to implicitly pass to
-         *                 the handler
+         * @note This creates internal copies of \a args to pass to
+         *       the signal handler. See \ref forward() if you wish
+         *       to forward references instead
+         *
+         * @param[in] args Input arguments to implicitly forward
+         *                 to the handler
          */
         void bind(A... args)
         {
