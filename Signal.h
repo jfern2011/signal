@@ -356,7 +356,7 @@ namespace Signal
         template<int... S>
         R run(seq<S...>)
         {
-            auto& sargs =  this->_sargs;
+            auto& sargs = this->_sargs;
             
             if (_forward)
             {
