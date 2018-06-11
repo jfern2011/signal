@@ -83,7 +83,7 @@ namespace Signal
      * @class signal_t
      *
      * An interface that can be used to access your signal when it is
-     * either a fcn_ptr or mem_ptr
+     * either a \ref fcn_ptr or \ref mem_ptr
      *
      * @tparam R  Signal handler return type
      * @tparam A  Specifies the type(s) of each input argument to the
