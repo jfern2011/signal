@@ -10,6 +10,7 @@
 #define __SIGNAL_H__
 
 #include <cstddef>
+#include <memory>
 #include <tuple>
 #include <utility>
 
@@ -625,7 +626,7 @@ namespace Signal
         /**
          * Default constructor
          */
-        Signal() : _is_mem_ptr(false), _sig(nullptr)
+        Signal() : _is_mem_ptr(false), _sig()
         {
         }
 
@@ -636,7 +637,7 @@ namespace Signal
          */
         Signal(R(*func)(A...)) : _is_mem_ptr(false)
         {
-            _sig = new fcn_ptr<R,A...>(func);
+            _sig.reset(new fcn_ptr<R,A...>(func));
         }
 
         /**
@@ -652,7 +653,7 @@ namespace Signal
         template <typename C>
         Signal(C& obj, R(C::*func)(A...)) : _is_mem_ptr(true)
         {
-            _sig = new mem_ptr<R,C,A...>(obj, func);
+            _sig.reset(new mem_ptr<R,C,A...>(obj, func));
         }
 
         /**
@@ -668,7 +669,7 @@ namespace Signal
         template <typename C>
         Signal(C& obj, R(C::*func)(A...) const) : _is_mem_ptr(true)
         {
-            _sig = new mem_ptr<R,C,A...>(obj, func);
+            _sig.reset(new mem_ptr<R,C,A...>(obj, func));
         }
 
         /**
@@ -677,7 +678,6 @@ namespace Signal
          * @param [in] other The Signal of which *this will be a copy
          */
         Signal(const Signal<R,A...>& other)
-            : _sig(nullptr)
         {
             *this = other;
         }
@@ -689,7 +689,6 @@ namespace Signal
          *                   \a other detached
          */
         Signal(Signal<R,A...>&& other)
-            : _sig(nullptr)
         {
             *this = std::move( other );
         }
@@ -697,10 +696,7 @@ namespace Signal
         /**
          * Destructor
          */
-        virtual ~Signal()
-        {
-            if (_sig) delete _sig;
-        }
+        virtual ~Signal() {}
 
         /**
          * Copy assignment operator
@@ -713,11 +709,10 @@ namespace Signal
         {
             if (this != &rhs)
             {
-                if (_sig) delete _sig;
+                _sig.reset( dynamic_cast<
+                    signal_t<R,A...>*>(rhs._sig->clone()) );
 
                 _is_mem_ptr = rhs._is_mem_ptr;
-                _sig   = dynamic_cast<
-                    signal_t<R,A...>*>( rhs._sig->clone() );
             }
 
             return *this;
@@ -735,13 +730,11 @@ namespace Signal
         {
             if (this != &rhs)
             {
-                if (_sig) delete _sig;
-                
                 _is_mem_ptr = rhs._is_mem_ptr;
-                _sig = rhs._sig;
                 
+                _sig  = std::move( rhs._sig );
+
                 rhs._is_mem_ptr = false;
-                rhs._sig = nullptr;
             }
 
             return *this;
@@ -760,9 +753,7 @@ namespace Signal
             if (is_connected() && !detach())
                 return false;
 
-            if (_sig) delete _sig;
-
-            _sig = new fcn_ptr<R,A...>(func);
+            _sig.reset(new fcn_ptr<R,A...>(func));
             _is_mem_ptr = false;
 
             return _sig->is_connected();
@@ -787,9 +778,7 @@ namespace Signal
                 return false;
             else
             {
-                if (_sig) delete _sig;
-
-                _sig = new mem_ptr<R,C,A...>(obj, func);
+                _sig.reset(new mem_ptr<R,C,A...>(obj, func));
                 _is_mem_ptr = true;
             }
 
@@ -814,7 +803,8 @@ namespace Signal
             if (!_is_mem_ptr || !is_connected())
                 return false;
             else
-                dynamic_cast<mem_ptr<R,C,A...>*>(_sig)->attach(func);
+                std::dynamic_pointer_cast<
+                    mem_ptr<R,C,A...>>(_sig)->attach(func);
 
             return _sig->is_connected();
         }
@@ -838,9 +828,7 @@ namespace Signal
                 return false;
             else
             {
-                if (_sig) delete _sig;
-                
-                _sig = new mem_ptr<R,C,A...>(obj, func);
+                _sig.reset(new mem_ptr<R,C,A...>(obj, func));
                 _is_mem_ptr = true;
             }
 
@@ -865,7 +853,8 @@ namespace Signal
             if (!_is_mem_ptr || !is_connected())
                 return false;
             else
-                dynamic_cast<mem_ptr<R,C,A...>*>(_sig)->attach(func);
+                std::dynamic_pointer_cast<
+                    mem_ptr<R,C,A...>>(_sig)->attach(func);
 
             return _sig->is_connected();
         }
@@ -906,8 +895,8 @@ namespace Signal
         {
             if (!_sig) return false;
 
-            delete _sig; _sig = nullptr;
-            _is_mem_ptr = false;
+            _sig.reset();
+                _is_mem_ptr = false;
 
             return true;
         }
@@ -1006,7 +995,7 @@ namespace Signal
 
         bool _is_mem_ptr;
 
-        signal_t<R,A...>*
+        std::shared_ptr< signal_t<R,A...> >
             _sig;
     };
 
