@@ -47,11 +47,10 @@ namespace Signal
     struct SignalArgs
     {
         std::tuple<typename std::remove_const<
-                   typename std::remove_reference<T>::type>::type ...>
+                   typename std::remove_reference<T>::type>::type...>
             args;
 
-        std::tuple<typename std::remove_const<
-                   typename std::remove_reference<T>::type>::type*...>
+        std::tuple<typename std::add_pointer<T>::type...>
             ptrs;
     };
 #endif
@@ -100,9 +99,18 @@ namespace Signal
 
         virtual ~signal_t() {}
 
-        virtual generic* clone()    const = 0;
-        virtual bool detach() = 0;
-        virtual R raise(A...) = 0;
+        virtual void bind(A...)        = 0;
+        virtual generic* clone() const = 0;
+        virtual bool detach()          = 0;
+        virtual void forward(A...)     = 0;
+        virtual bool has_refs()  const = 0;
+        virtual R raise(A...)          = 0;
+
+        /**
+         * Arguments to forward to the handler
+         */
+        SignalArgs< A... > 
+            _sargs;
     };
 
     /**
@@ -223,10 +231,9 @@ namespace Signal
          * @param [in] args A set of arguments to implicitly pass to
          *                  the handler
          */
-        template <typename... T>
-        void bind(T&&... args)
+        void bind(A... args)
         {
-            _sargs.args = std::make_tuple(std::forward<T>(args)...);
+            this->_sargs.args = std::make_tuple(args...);
             _forward = false;
         }
 
@@ -244,8 +251,8 @@ namespace Signal
             sig->_forward    = _forward;
             sig->_func       = _func;
             sig->_is_init    = _is_init;
-            sig->_sargs      = _sargs;
-
+            sig->_sargs      =
+                this->_sargs;
             return sig;
         }
 
@@ -256,9 +263,9 @@ namespace Signal
          */
         bool detach()
         {
-            _is_init = false;
             _const_func = nullptr; _func = nullptr;
 
+            _is_init = false;
             return true;
         }
 
@@ -274,11 +281,18 @@ namespace Signal
          *
          * @param[in] args Input arguments to implicitly forward
          */
-        template <typename... T>
-        void forward(T&&... args)
+        void forward(A... args)
         {
-            _sargs.ptrs = std::make_tuple(&std::forward<T>(args)...);
+            this->_sargs.ptrs = std::make_tuple(&args...);
             _forward = true;
+        }
+
+        /**
+         * @return True if reference forwarding is enabled
+         */
+        bool has_refs() const
+        {
+            return _forward;
         }
 
         /**
@@ -304,10 +318,10 @@ namespace Signal
         R raise(A... args)
         {
             if (_func != nullptr)
-                return (_obj.*_func)(std::forward<A>(args)...);
+                return (_obj.*_func)(args...);
             else
                 return
-                 (_obj.*_const_func)(std::forward<A>(args)...);
+                 (_obj.*_const_func)(args...);
         }
 
         /**
@@ -342,21 +356,29 @@ namespace Signal
         template<int... S>
         R run(seq<S...>)
         {
+            auto& sargs =  this->_sargs;
+            
             if (_forward)
             {
+                /*
+                 * Dereference stored pointers
+                 */
                 if (_func != nullptr)
-                    return (_obj.*_func)(*std::get<S>(_sargs.ptrs)...);
+                    return (_obj.*_func)(*std::get<S>(sargs.ptrs)...);
                 else
                     return
-                     (_obj.*_const_func)(*std::get<S>(_sargs.ptrs)...);
+                     (_obj.*_const_func)(*std::get<S>(sargs.ptrs)...);
             }
-            else // forward internal copies
+            else
             {
+                /*
+                 * Forward the internal copies
+                 */
                 if (_func != nullptr)
-                    return (_obj.*_func)( std::get<S>(_sargs.args)...);
+                    return (_obj.*_func)( std::get<S>(sargs.args)...);
                 else
                     return
-                     (_obj.*_const_func)( std::get<S>(_sargs.args)...);
+                     (_obj.*_const_func)( std::get<S>(sargs.args)...);
             }
         }
 
@@ -366,9 +388,6 @@ namespace Signal
         Handler _func;
         bool    _is_init;
         C&      _obj;
-
-        SignalArgs< A... >
-                _sargs;
     };
 
     /**
@@ -447,10 +466,9 @@ namespace Signal
          *
          * @param[in] args Input arguments to implicitly forward
          */
-        template <typename... T>
-        void bind(T&&... args)
+        void bind(A... args)
         {
-            _sargs.args = std::make_tuple(std::forward<T>(args)...);
+            this->_sargs.args = std::make_tuple(args...);
             _forward = false;
         }
 
@@ -464,10 +482,10 @@ namespace Signal
         {
             fcn_ptr<R,A...>* sig = new fcn_ptr<R,A...>( _func );
 
-            sig->_forward    = _forward;
-            sig->_is_init    = _is_init;
-            sig->_sargs      = _sargs;
-
+            sig->_forward = _forward;
+            sig->_is_init = _is_init;
+            sig->_sargs   =
+                this->_sargs;
             return sig;
         }
 
@@ -495,17 +513,24 @@ namespace Signal
          *
          * @param[in] args Input arguments to implicitly forward
          */
-        template <typename... T>
-        void forward(T&&... args)
+        void forward(A... args)
         {
-            _sargs.ptrs = std::make_tuple(&std::forward<T>(args)...);
+            this->_sargs.ptrs = std::make_tuple(&args...);
             _forward = true;
         }
 
         /**
-         * Determine if this signal is currently attached
+         * @return True if reference forwarding is enabled
+         */
+        bool has_refs() const
+        {
+            return _forward;
+        }
+
+        /**
+         *  Determine if this signal is currently attached
          *
-         * @return True if attached
+         *  @return True if attached
          */
         bool is_connected() const
         {
@@ -523,7 +548,7 @@ namespace Signal
          */
         R raise(A... args)
         {
-            return _func(std::forward<A>(args)...);
+            return _func(args...);
         }
 
         /**
@@ -559,17 +584,14 @@ namespace Signal
         R run(seq<S...>)
         {
             if (_forward)
-                return _func (*std::get<S>(_sargs.ptrs)... );    
+                return _func(*std::get<S>(this->_sargs.ptrs)... );    
             else
-                return _func ( std::get<S>(_sargs.args)... );
+                return _func( std::get<S>(this->_sargs.args)... );
         }
 
         bool    _forward;
         Handler _func;
         bool    _is_init;
-
-        SignalArgs<A...>
-                _sargs;
     };
 
     /**
@@ -597,8 +619,7 @@ namespace Signal
         /**
          * Default constructor
          */
-        Signal()
-            : _forward(false), _is_mem_ptr(false), _sig(nullptr)
+        Signal() : _is_mem_ptr(false), _sig(nullptr)
         {
         }
 
@@ -607,8 +628,7 @@ namespace Signal
          *
          * @param[in] func A pointer to the signal handler
          */
-        Signal(R(*func)(A...))
-            : _forward(false), _is_mem_ptr(false)
+        Signal(R(*func)(A...)) : _is_mem_ptr(false)
         {
             _sig = new fcn_ptr<R,A...>(func);
         }
@@ -624,8 +644,7 @@ namespace Signal
          *                 to class C
          */
         template <typename C>
-        Signal(C& obj, R(C::*func)(A...))
-            : _forward(false), _is_mem_ptr(true)
+        Signal(C& obj, R(C::*func)(A...)) : _is_mem_ptr(true)
         {
             _sig = new mem_ptr<R,C,A...>(obj, func);
         }
@@ -641,8 +660,7 @@ namespace Signal
          *                 belongs to class C
          */
         template <typename C>
-        Signal(C& obj, R(C::*func)(A...) const)
-            : _forward(false),_is_mem_ptr(true)
+        Signal(C& obj, R(C::*func)(A...) const) : _is_mem_ptr(true)
         {
             _sig = new mem_ptr<R,C,A...>(obj, func);
         }
@@ -691,9 +709,7 @@ namespace Signal
             {
                 if (_sig) delete _sig;
 
-                _forward    = rhs._forward;
                 _is_mem_ptr = rhs._is_mem_ptr;
-                _sargs = rhs._sargs;
                 _sig   = dynamic_cast<
                     signal_t<R,A...>*>( rhs._sig->clone() );
             }
@@ -715,9 +731,7 @@ namespace Signal
             {
                 if (_sig) delete _sig;
                 
-                _forward    = rhs._forward;
                 _is_mem_ptr = rhs._is_mem_ptr;
-                _sargs      = std::move ( rhs._sargs );
                 _sig = rhs._sig;
                 
                 rhs._is_mem_ptr = false;
@@ -850,11 +864,9 @@ namespace Signal
          * @param[in] args The set of arguments to implicitly pass to
          *                 the handler
          */
-        template <typename... T>
-        void bind(T&&... args)
+        void bind(A... args)
         {
-            _sargs.args =  std::make_tuple(std::forward<T>(args)...);
-            _forward = false;
+            _sig->bind(args...);
         }
 
         /**
@@ -895,11 +907,9 @@ namespace Signal
          *
          * @param[in] args Input arguments to implicitly forward
          */
-        template <typename... T>
-        void forward(T&&... args)
+        void forward(A... args)
         {
-            _sargs.ptrs = std::make_tuple(&std::forward<T>(args)...);
-            _forward = true;
+            _sig->forward(args...);
         }
 
         /**
@@ -929,7 +939,7 @@ namespace Signal
          */
         R raise(A... args)
         {
-            return _sig->raise(std::forward<A>(args)...);
+            return _sig->raise(args...);
         }
 
         /**
@@ -970,20 +980,17 @@ namespace Signal
         template<int... S>
         R run(seq<S...>)
         {
-            if (_forward)
+            auto& _sargs = _sig->_sargs;
+            if (_sig->has_refs())
                 return _sig->raise(*std::get<S>(_sargs.ptrs)... );
             else
                 return _sig->raise( std::get<S>(_sargs.args)... );
         }
 
-        bool    _forward;
-        bool    _is_mem_ptr;
-
-        SignalArgs<A...> 
-                _sargs;
+        bool _is_mem_ptr;
 
         signal_t<R,A...>*
-                _sig;
+            _sig;
     };
 
     /**

@@ -389,6 +389,130 @@ public:
 	}
 };
 
+namespace net
+{
+	class DataBuffer
+	{
+
+	public:
+
+		DataBuffer() : _buf(nullptr), _size(0)
+		{
+		}
+
+		DataBuffer(char* buf, size_t size)
+			: _buf(buf), _size(size)
+		{
+		}
+
+		~DataBuffer()
+		{
+		}
+
+		size_t size() { return _size; }
+
+	private:
+
+		char* _buf; size_t _size;
+	};
+}
+
+char* raw = new char[1024];
+
+class Test
+{
+
+public:
+
+	void func(net::DataBuffer& buf)
+	{
+		buf = net::DataBuffer(raw, 512);
+	}
+};
+
+void func(net::DataBuffer& buf)
+{
+	net::DataBuffer b2(raw, 1024);
+	buf = b2;
+}
+
+bool test_fcn_ptr()
+{
+	Signal::fcn_ptr<void,net::DataBuffer&>
+		sig;
+	AbortIfNot(sig.attach(&func), false);
+
+	net::DataBuffer buf;
+	sig.forward(buf);
+
+	sig.raise();
+
+	std::printf("%s: buffer is %zu bytes.\n",
+				__FUNCTION__, buf.size());
+	std::fflush(stdout);
+
+	return true;
+}
+
+bool test_mem_ptr()
+{
+	Test test;
+	Signal::mem_ptr<void,Test,net::DataBuffer&>
+		sig(test);
+
+	AbortIfNot(sig.attach(&Test::func), false);
+
+	net::DataBuffer buf;
+	sig.forward(buf);
+
+	sig.raise();
+
+	std::printf("%s: buffer is %zu bytes.\n",
+				__FUNCTION__, buf.size());
+	std::fflush(stdout);
+
+	return true;
+}
+
+bool test_sig1()
+{
+	Signal::Signal<void,net::DataBuffer&>
+		sig;
+
+	AbortIfNot(sig.attach(&func), false);
+
+	net::DataBuffer buf;
+	sig.forward(buf);
+
+	sig.raise();
+
+	std::printf("%s: buffer is %zu bytes.\n",
+				__FUNCTION__, buf.size());
+	std::fflush(stdout);
+
+	return true;
+}
+
+bool test_sig2()
+{
+	Test test;
+	Signal::Signal<void,net::DataBuffer&>
+		sig;
+
+	AbortIfNot(sig.attach(test, &Test::func), false);
+
+	net::DataBuffer buf;
+	sig.forward(buf);
+
+	sig.raise();
+
+	std::printf("%s: buffer is %zu bytes.\n",
+				__FUNCTION__, buf.size());
+	std::fflush(stdout);
+
+	return true;
+}
+
 int main()
 {
 	mem_ptr_test test1;
@@ -406,6 +530,13 @@ int main()
 
 	callable_test test4;
 	AbortIfNot(test4.run(), 1);
+
+	test_fcn_ptr();
+	test_mem_ptr();
+	test_sig1();
+	test_sig2();
+
+	delete[] raw;
 
 	std::cout << "Test complete."
 		<< std::endl;
