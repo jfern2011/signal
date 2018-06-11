@@ -329,6 +329,8 @@ public:
 			Signal::Signal<  void,const std::string&, int>*>(sig3);
 		sig4->raise("I'm sig4" , 4444);
 
+		delete sig4;
+
 		AbortIfNot(sig_v.detach(), false);
 		AbortIfNot(sig_v_s_i.detach(), false);
 		AbortIfNot(sig_s.detach(), false);

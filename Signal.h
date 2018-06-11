@@ -760,6 +760,8 @@ namespace Signal
             if (is_connected() && !detach())
                 return false;
 
+            if (_sig) delete _sig;
+
             _sig = new fcn_ptr<R,A...>(func);
             _is_mem_ptr = false;
 
@@ -785,6 +787,8 @@ namespace Signal
                 return false;
             else
             {
+                if (_sig) delete _sig;
+
                 _sig = new mem_ptr<R,C,A...>(obj, func);
                 _is_mem_ptr = true;
             }
@@ -834,6 +838,8 @@ namespace Signal
                 return false;
             else
             {
+                if (_sig) delete _sig;
+                
                 _sig = new mem_ptr<R,C,A...>(obj, func);
                 _is_mem_ptr = true;
             }
