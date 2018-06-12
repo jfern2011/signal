@@ -709,10 +709,10 @@ namespace Signal
         {
             if (this != &rhs)
             {
-                _sig.reset( dynamic_cast<
-                    signal_t<R,A...>*>(rhs._sig->clone()) );
+                // Is implicitly deleted by move assignment:
 
                 _is_mem_ptr = rhs._is_mem_ptr;
+                _sig        = rhs._sig;
             }
 
             return *this;
