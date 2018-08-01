@@ -103,7 +103,8 @@ namespace Signal
         virtual void bind(A...)        = 0;
         virtual generic* clone() const = 0;
         virtual bool detach()          = 0;
-        virtual void forward(A...)     = 0;
+        virtual void forward(
+            typename std::remove_reference<A>::type&... args) = 0;
         virtual bool has_refs()  const = 0;
         virtual R raise(A...)          = 0;
 
@@ -287,7 +288,7 @@ namespace Signal
          *
          * @param[in] args Input arguments to implicitly forward
          */
-        void forward(A... args)
+        void forward(typename std::remove_reference<A>::type&... args)
         {
             this->_sargs.ptrs = std::make_tuple(&args...);
             _forward = true;
@@ -520,7 +521,7 @@ namespace Signal
          *
          * @param[in] args Input arguments to implicitly forward
          */
-        void forward(A... args)
+        void forward(typename std::remove_reference<A>::type&... args)
         {
             this->_sargs.ptrs = std::make_tuple(&args...);
             _forward = true;
@@ -913,7 +914,7 @@ namespace Signal
          *
          * @param[in] args Input arguments to implicitly forward
          */
-        void forward(A... args)
+        void forward(typename std::remove_reference<A>::type&... args)
         {
             _sig->forward(args...);
         }

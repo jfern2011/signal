@@ -430,6 +430,13 @@ public:
 	{
 		buf = net::DataBuffer(raw, 512);
 	}
+
+	void func2(net::DataBuffer buf)
+	{
+		std::printf("%s: buffer is %zu bytes.\n",
+				__FUNCTION__, buf.size());
+		std::fflush(stdout);
+	}
 };
 
 void func(net::DataBuffer& buf)
@@ -515,6 +522,25 @@ bool test_sig2()
 	return true;
 }
 
+bool test_sig3()
+{
+	Test test;
+	Signal::Signal<void,net::DataBuffer>
+		sig;
+
+	AbortIfNot(sig.attach(test, &Test::func2), false);
+
+	net::DataBuffer buf(nullptr, 10);
+	sig.forward(buf);
+
+	/*
+	 * By-value call using stored pointers:
+	 */
+	sig.raise();
+
+	return true;
+}
+
 int main()
 {
 	mem_ptr_test test1;
@@ -537,6 +563,7 @@ int main()
 	test_mem_ptr();
 	test_sig1();
 	test_sig2();
+	test_sig3();
 
 	delete[] raw;
 
